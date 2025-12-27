@@ -1,0 +1,246 @@
+{
+  "compactView": false,
+  "compactingFactor": 1.5,
+  "minLinkLength": 18,
+  "excalibrainFilepath": "ExcaliBrain/excalibrain.md",
+  "indexUpdateInterval": 5000,
+  "hierarchy": {
+    "exclusions": [
+      "excalidraw-border-color",
+      "excalidraw-css",
+      "excalidraw-default-mode",
+      "excalidraw-export-dark",
+      "excalidraw-export-pngscale",
+      "excalidraw-export-svgpadding",
+      "excalidraw-export-transparent",
+      "excalidraw-font",
+      "excalidraw-font-color",
+      "excalidraw-link-brackets",
+      "excalidraw-link-prefix",
+      "excalidraw-linkbutton-opacity",
+      "excalidraw-onload-script",
+      "excalidraw-plugin",
+      "excalidraw-url-prefix",
+      "kanban-plugin"
+    ],
+    "parents": [
+      "origin",
+      "Parent",
+      "source"
+    ],
+    "children": [
+      "Child",
+      "Children",
+      "contributes to",
+      "leads to",
+      "relation"
+    ],
+    "leftFriends": [
+      "advantages",
+      "alternatives",
+      "Friend",
+      "pros",
+      "related",
+      "related-mind-map",
+      "related-reference-note",
+      "similar",
+      "supports"
+    ],
+    "rightFriends": [
+      "cons",
+      "disadvantages",
+      "opposite"
+    ],
+    "previous": [
+      "Before",
+      "prev-version",
+      "Previous"
+    ],
+    "next": [
+      "After",
+      "Next",
+      "next-version"
+    ],
+    "hidden": [
+      "hidden"
+    ]
+  },
+  "inferAllLinksAsFriends": true,
+  "inverseInfer": false,
+  "inverseArrowDirection": true,
+  "renderAlias": true,
+  "nodeTitleScript": "",
+  "backgroundColor": "#0c3e6aff",
+  "excludeFilepaths": [],
+  "autoOpenCentralDocument": false,
+  "toggleEmbedTogglesAutoOpen": true,
+  "showInferredNodes": true,
+  "showAttachments": true,
+  "showURLNodes": true,
+  "showVirtualNodes": true,
+  "showFolderNodes": false,
+  "showTagNodes": false,
+  "showPageNodes": true,
+  "showNeighborCount": true,
+  "showFullTagName": false,
+  "maxItemCount": 30,
+  "renderSiblings": true,
+  "applyPowerFilter": false,
+  "baseNodeStyle": {
+    "prefix": "",
+    "backgroundColor": "#00000066",
+    "fillStyle": "solid",
+    "textColor": "#ffffffff",
+    "borderColor": "#00000000",
+    "fontSize": 20,
+    "fontFamily": 3,
+    "maxLabelLength": 30,
+    "roughness": 0,
+    "strokeShaprness": "round",
+    "strokeWidth": 1,
+    "strokeStyle": "solid",
+    "padding": 10,
+    "gateRadius": 5,
+    "gateOffset": 15,
+    "gateStrokeColor": "#ffffffff",
+    "gateBackgroundColor": "#ffffffff",
+    "gateFillStyle": "solid"
+  },
+  "centralNodeStyle": {
+    "fontSize": 30,
+    "backgroundColor": "#B5B5B5",
+    "textColor": "#000000ff"
+  },
+  "inferredNodeStyle": {
+    "backgroundColor": "#000005b3",
+    "textColor": "#95c7f3ff"
+  },
+  "urlNodeStyle": {
+    "prefix": "🌐 "
+  },
+  "virtualNodeStyle": {
+    "backgroundColor": "#ff000066",
+    "fillStyle": "hachure",
+    "textColor": "#ffffffff"
+  },
+  "siblingNodeStyle": {
+    "fontSize": 15
+  },
+  "attachmentNodeStyle": {
+    "prefix": "📎 "
+  },
+  "folderNodeStyle": {
+    "prefix": "📂 ",
+    "strokeShaprness": "sharp",
+    "borderColor": "#ffd700ff",
+    "textColor": "#ffd700ff"
+  },
+  "tagNodeStyle": {
+    "prefix": "#",
+    "strokeShaprness": "sharp",
+    "borderColor": "#4682b4ff",
+    "textColor": "#4682b4ff"
+  },
+  "tagNodeStyles": {},
+  "tagStyleList": [],
+  "primaryTagField": "Note type",
+  "primaryTagFieldLowerCase": "note-type",
+  "displayAllStylePrefixes": true,
+  "baseLinkStyle": {
+    "strokeColor": "#696969FF",
+    "strokeWidth": 1,
+    "strokeStyle": "solid",
+    "roughness": 0,
+    "startArrowHead": "none",
+    "endArrowHead": "none",
+    "showLabel": false,
+    "fontSize": 10,
+    "fontFamily": 3,
+    "textColor": "#ffffffff"
+  },
+  "inferredLinkStyle": {
+    "strokeStyle": "dashed"
+  },
+  "folderLinkStyle": {
+    "strokeColor": "#ffd700ff"
+  },
+  "tagLinkStyle": {
+    "strokeColor": "#4682b4ff"
+  },
+  "hierarchyLinkStyles": {
+    "hidden": {},
+    "Child": {},
+    "Children": {},
+    "contributes to": {},
+    "leads to": {},
+    "advantages": {},
+    "alternatives": {},
+    "Friend": {},
+    "pros": {},
+    "similar": {},
+    "supports": {},
+    "cons": {},
+    "disadvantages": {},
+    "Before": {},
+    "Previous": {},
+    "After": {},
+    "Next": {},
+    "opposite": {},
+    "origin": {},
+    "Parent": {},
+    "source": {},
+    "relation": {},
+    "related": {},
+    "related-mind-map": {},
+    "related-reference-note": {},
+    "prev-version": {},
+    "next-version": {}
+  },
+  "navigationHistory": [
+    "Media Note - How to Think 3x Faster in 7 Days (from a Top 1% Med Student).md",
+    "Reference Notes/Justin Sung - (135) How to ACTUALLY Stick to Your Schedule (2 Simple Rules) - YouTube.md",
+    "Reference Notes/Justin Sung - Watch this to FORCE your brain to study faster.md",
+    "Reference Notes/Justin Sung - What I learnt after 3000 days of scheduling.md",
+    "Reference Notes/Justin Sung - How to Never Lose Focus Again.md",
+    "Reference Notes/Justin Sung - How I changed my life in 334 days with Reverse Goal Setting.md",
+    "Reference Notes/Justin Sung - My Ultimate Rules for Staying Productive (And How YOU Can Follow Them Too).md",
+    "Reference Notes/Justin Sung - How To Be SO Productive That It Feels ILLEGAL.md",
+    "Reference Notes/Justin Sung - How the Top 0.1% Learn in Lectures.md",
+    "Reference Notes/Justin Sung - Study More Efficiently With These 2 Basic Steps.md",
+    "Reference Notes/Justin Sung - Bloom's Taxonomy Is One of the MOST Effective Study Techniques (Better Than Active Recall).md",
+    "Untitled.md",
+    "Canvas/canvas 2.canvas",
+    "References/SOLO Taxonomy.md",
+    "References/Bloom's Taxonomy.md",
+    "Canvas/Untitled.canvas",
+    "Notes/_note_Notes.md",
+    "Excalidraw/ExcaliBrain Snapshot - Untitled.excalidraw.md",
+    "Excalidraw/Drawing 2025-01-20 00.31.17.excalidraw.md",
+    "--Attachments/Eisenhower Matrix.png",
+    "References/Eisenhower Matrix.md",
+    "Excalidraw/Drawing 2025-01-21 20.39.54.excalidraw.md",
+    "Reference Notes/iCanStudy - HUDLE White Paper.md",
+    "Reference Notes/iCanStudy Program.md",
+    "--Attachments/Copy of Map of learning.pdf",
+    "Reference Notes/Andrew Huberman - Optimal Protocols for Studying & Learning.md",
+    "Notes/Summarized Learning Methodologies, concepts and learning system.md",
+    "--Explore/Primary learning methodologies to focus.md"
+  ],
+  "allowOntologySuggester": true,
+  "ontologySuggesterParentTrigger": "--p",
+  "ontologySuggesterChildTrigger": "--c",
+  "ontologySuggesterLeftFriendTrigger": "--l",
+  "ontologySuggesterRightFriendTrigger": "--r",
+  "ontologySuggesterPreviousTrigger": "--e",
+  "ontologySuggesterNextTrigger": "--n",
+  "ontologySuggesterTrigger": "--:",
+  "ontologySuggesterMidSentenceTrigger": "(",
+  "boldFields": false,
+  "allowAutozoom": true,
+  "maxZoom": 1,
+  "allowAutofocuOnSearch": true,
+  "defaultAlwaysOnTop": false,
+  "embedCentralNode": true,
+  "centerEmbedWidth": 550,
+  "centerEmbedHeight": 700
+}

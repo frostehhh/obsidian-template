@@ -1,0 +1,1 @@
+{"path":"Amazon Web Services/Images/Pasted image 20230514004752.png","text":"CFN Nested Stacks @ tstisncnin @ s * Overcome the 500 Resource Limit of one stack * Modular templates ... code reuse * Make the installation process easier ... * .. nested stacks created by the root stack e @ Use only when everything is lifecycle linked","libVersion":"0.3.2","langs":"eng"}

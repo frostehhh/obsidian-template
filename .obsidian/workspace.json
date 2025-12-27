@@ -1,0 +1,269 @@
+{
+  "main": {
+    "id": "a93c96a744ff55e6",
+    "type": "split",
+    "children": [
+      {
+        "id": "695574e32f712a98",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "95e2357123ba1b42",
+            "type": "leaf",
+            "state": {
+              "type": "mx-welcome",
+              "state": {},
+              "icon": "home",
+              "title": "Media Extended onboarding"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "6f41992da3c7f59e",
+    "type": "split",
+    "children": [
+      {
+        "id": "7b7a61d934b5e312",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "bd2714a80d3d3c1d",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "b0c2dedb11ea3190",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "joe hudson",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "0fc0c9c5268a5851",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 267
+  },
+  "right": {
+    "id": "2e5b03630ad99a9e",
+    "type": "split",
+    "children": [
+      {
+        "id": "893d8ad78ecdd498",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8f96f2b92bce22dd",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "excalibrain.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": false
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for excalibrain"
+            }
+          },
+          {
+            "id": "b6ccd2f876a599ff",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "excalibrain.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from excalibrain"
+            }
+          },
+          {
+            "id": "e2c80372fbe8dfbc",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "d2667930fede267f",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "excalibrain.md"
+              },
+              "icon": "lucide-list",
+              "title": "Outline of excalibrain"
+            }
+          },
+          {
+            "id": "b7a897f0c88ab5ce",
+            "type": "leaf",
+            "state": {
+              "type": "git-view",
+              "state": {},
+              "icon": "lucide-ghost",
+              "title": "git-view"
+            }
+          },
+          {
+            "id": "fa3086fb0ad06606",
+            "type": "leaf",
+            "state": {
+              "type": "side-panel-control-view",
+              "state": {},
+              "icon": "lucide-ghost",
+              "title": "side-panel-control-view"
+            }
+          },
+          {
+            "id": "4265431c93419ccb",
+            "type": "leaf",
+            "state": {
+              "type": "advanced-tables-toolbar",
+              "state": {},
+              "icon": "lucide-ghost",
+              "title": "advanced-tables-toolbar"
+            }
+          },
+          {
+            "id": "c4dbbf95ba70402a",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "SpacedRepIcon",
+              "title": "Notes Review Queue"
+            }
+          }
+        ],
+        "currentTab": 7
+      }
+    ],
+    "direction": "horizontal",
+    "width": 407,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "bases:Create new base": false,
+      "workspaces:Manage workspace layouts": false,
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "obsidian-git:Open Git source control": false,
+      "obsidian-markdown-formatting-assistant-plugin:Open Markdown Formatting Assistant": false,
+      "omnisearch:Omnisearch": false,
+      "open-vscode:VSCode": false,
+      "media-extended:Open media": false,
+      "mermaid-tools:Open Mermaid Toolbar": false,
+      "obsidian-excalidraw-plugin:New drawing": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false,
+      "obsidian-kanban:Create new board": false,
+      "obsidian-spaced-repetition:Review flashcards": false,
+      "templater-obsidian:Templater": false,
+      "media-extended:Open external media": false
+    }
+  },
+  "active": "c4dbbf95ba70402a",
+  "lastOpenFiles": [
+    "Book Reviews/Atomic Habits.md",
+    "Dataviews/Draft Video-notes.md",
+    "Motivation.md",
+    "References/Bloom's Taxonomy.md",
+    "Reference Notes/HealthyGamerGG/_note_HealthyGamerGG.md",
+    "Reference Notes/HealthyGamerGG/Dr K. Explains - Escaping Your Ego Free Members Lecture).md",
+    "Notes/AIM - Bear Hunter System.md",
+    "References/Eisenhower Matrix.md",
+    "References/SOLO Taxonomy.md",
+    "Excalidraw/Drawing 2025-01-21 20.39.54.excalidraw.md",
+    "--Explore/Studying connected concepts in the same session.md",
+    "--Explore/Primary learning methodologies to focus.md",
+    "Personal Notes/Summarized Self-management Guidelines.md",
+    "--Attachments/Dr K. Explains - Escaping Your Ego Free Members Lecture) 2025-08-24 20.00.57.excalidraw.md",
+    "Reference Notes/HealthyGamerGG/Drawing 2025-08-24 20.00.32.excalidraw.md",
+    "Reference Notes/HealthyGamerGG/5 Habits that Changed My Life.md",
+    "Bases/HealthyGamerGG.base",
+    "Reference Notes/Joe Hudson/Joe Hudson Core Principles.md",
+    "Reference Notes/Joe Hudson/How to Embrace the Emotions You Resist & Find Lasting Freedom.md",
+    "Bases/Joe Hudson.base",
+    "Bases/Justin Sung.base",
+    "Bases/Draft.base",
+    "Reference Notes/Joe Hudson/Art of Accomplishment/How Connection Can Change Your Life.md",
+    "Reference Notes/Joe Hudson/The Art Of Mastering Your Emotions - Joe Hudson.md",
+    "Reference Notes/Joe Hudson",
+    "Reference Notes/_note_Reference Notes.md",
+    "Reference Notes/Art of Accomplishment/Untitled.md",
+    "Personal Notes/Summarized Learning Methodologies, concepts and learning system.md",
+    "Personal Notes/Learning Visual Process Mapping.md",
+    "Personal Notes/Notes or To-dos.md",
+    "Personal Notes/Learning and productivity techniques to research based on iCanStudy program coverage.md",
+    "Reference Notes/Joe Hudson/Art of Accomplishment",
+    "Bases/Andrew Huberman.base",
+    "Canvas/Untitled.canvas",
+    "Bases",
+    "Reference Notes/HealthyGamerGG",
+    "Personal Notes",
+    "--Attachments/Pasted image 20250413133349.png",
+    "--Attachments/Pasted image 20250413133339.png",
+    "--Attachments/Pasted image 20250413133047.png",
+    "--Attachments/Pasted image 20250412144230.png",
+    "--Attachments/Pasted image 20250224012450.png",
+    "--Attachments/Pasted image 20250224011920.png",
+    "--Attachments/Pasted image 20250223200513.png",
+    "--Attachments/Pasted image 20250222013906.png",
+    "--Attachments/Pasted image 20250222005308.png",
+    "--Attachments/Pasted image 20250222002938.png",
+    "Canvas/canvas 2.canvas",
+    "Untitled.canvas",
+    "Untitled 1.canvas"
+  ]
+}

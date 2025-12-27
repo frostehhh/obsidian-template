@@ -1,0 +1,29 @@
+{
+  "devMode": false,
+  "ignoreCodeBlockRestrictions": false,
+  "preferredDateFormat": "YYYY-MM-DD",
+  "firstWeekday": {
+    "index": 1,
+    "name": "Monday",
+    "shortName": "Mo"
+  },
+  "syncInterval": 200,
+  "enableJs": false,
+  "viewFieldDisplayNullAsEmpty": false,
+  "enableSyntaxHighlighting": true,
+  "enableEditorRightClickMenu": true,
+  "inputFieldTemplates": [
+    {
+      "name": "rating",
+      "declaration": "INPUT[inlineSelect(option(Very Unsatisfactory), option(Unsatisfactory), option(Ok), option(Good), option(Great))]"
+    },
+    {
+      "name": "certainty",
+      "declaration": "INPUT[inlineSelect(option(Definitely Not), option(Not sure), option(Maybe), option(Definite))]"
+    }
+  ],
+  "buttonTemplates": [],
+  "excludedFolders": [
+    "templates"
+  ]
+}

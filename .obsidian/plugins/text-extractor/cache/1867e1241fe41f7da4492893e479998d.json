@@ -1,0 +1,1 @@
+{"path":"Amazon Web Services/Images/Pasted image 20230509005104.png","text":"Transit Gateway Considerations @ tstteansanitia - @ sararcarc e Supports transitive routing e Can be used to create global networks e Share between accounts using AWS RAM * Peer with different regions ... same or cross account * Less complexity vs w/o TGW","libVersion":"0.3.2","langs":"eng"}

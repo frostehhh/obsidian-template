@@ -1,0 +1,120 @@
+{
+  "dualConfigs": false,
+  "showConsoleLog": false,
+  "desktop": {
+    "shortDelaySeconds": 5,
+    "longDelaySeconds": 15,
+    "delayBetweenPlugins": 40,
+    "defaultStartupType": null,
+    "showDescriptions": true,
+    "enableDependencies": false,
+    "plugins": {
+      "table-editor-obsidian": {
+        "startupType": "long"
+      },
+      "code-block-copy": {
+        "startupType": "long"
+      },
+      "obsidian-excalidraw-plugin": {
+        "startupType": "short"
+      },
+      "highlightr-plugin": {
+        "startupType": "short"
+      },
+      "obsidian-icon-folder": {
+        "startupType": "instant"
+      },
+      "obsidian-kanban": {
+        "startupType": "long"
+      },
+      "obsidian-linter": {
+        "startupType": "instant"
+      },
+      "obsidian-markdown-formatting-assistant-plugin": {
+        "startupType": "instant"
+      },
+      "obsidian-mind-map": {
+        "startupType": "long"
+      },
+      "notion-like-tables": {
+        "startupType": "long"
+      },
+      "obsidian-git": {
+        "startupType": "instant"
+      },
+      "simple-embeds": {
+        "startupType": "short"
+      },
+      "obsidian-style-settings": {
+        "startupType": "instant"
+      },
+      "obsidian-tasks-plugin": {
+        "startupType": "long"
+      },
+      "ai-image-analyzer": {
+        "startupType": "long"
+      },
+      "omnisearch": {
+        "startupType": "instant"
+      },
+      "text-extractor": {
+        "startupType": "instant"
+      },
+      "alx-folder-note": {
+        "startupType": "disabled"
+      },
+      "folder-note-core": {
+        "startupType": "disabled"
+      },
+      "open-vscode": {
+        "startupType": "instant"
+      },
+      "folder-note-plugin": {
+        "startupType": "instant"
+      },
+      "folder-notes": {
+        "startupType": "instant"
+      },
+      "zoottelkeeper-obsidian-plugin": {
+        "startupType": "instant"
+      },
+      "vscode-editor": {
+        "startupType": "disabled"
+      },
+      "dataview": {
+        "startupType": "instant"
+      },
+      "excalibrain": {
+        "startupType": "long"
+      },
+      "obsidian-meta-bind-plugin": {
+        "startupType": "long"
+      },
+      "obsidian-spaced-repetition": {
+        "startupType": "long"
+      },
+      "supercharged-links-obsidian": {
+        "startupType": "disabled"
+      },
+      "obsidian-hover-editor": {
+        "startupType": "instant"
+      },
+      "media-extended": {
+        "startupType": "instant"
+      },
+      "templater-obsidian": {
+        "startupType": "long"
+      },
+      "editing-toolbar": {
+        "startupType": "instant"
+      },
+      "mermaid-tools": {
+        "startupType": "instant"
+      },
+      "tag-wrangler": {
+        "startupType": "long"
+      }
+    },
+    "loadOrder": []
+  }
+}

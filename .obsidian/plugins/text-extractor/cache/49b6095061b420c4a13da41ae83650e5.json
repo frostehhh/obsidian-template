@@ -1,0 +1,1 @@
+{"path":"Amazon Web Services/Images/Pasted image 20230507235913.png","text":"Key Concepts @ s © s * Moves the AWS network closer to customers e Connections enter at edge .. using anycast IPs * Transit over AWS backbone to 1+ locations * Can be used for NON HTTP/S (TCP/UDP) - - **Difference from CloudFront**","libVersion":"0.3.2","langs":"eng"}

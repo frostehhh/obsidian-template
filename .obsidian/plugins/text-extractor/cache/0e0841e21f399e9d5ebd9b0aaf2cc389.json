@@ -1,0 +1,1 @@
+{"path":"Amazon Web Services/Images/Pasted image 20230508001021.png","text":"VPC Flow Logs @ st @ swrcs e Capture metadata (NOT CONTENTS) e Attached to a VPC - All ENIs in that VPC e ..Subnet - All ENIs in that Subnet e .. ENIs directly ¢ Flow Logs are NOT realtime ¢ Log Destinations ... S3 or CloudWatch Logs e ... or Athena for querying...","libVersion":"0.3.2","langs":"eng"}

@@ -1,0 +1,14 @@
+{
+  "shimmering-focus@@hide-settings-button": false,
+  "shimmering-focus@@show-sidebar-header-buttons": true,
+  "shimmering-focus@@normal-header-bar": true,
+  "shimmering-focus@@show-ribbon": true,
+  "shimmering-focus@@show-urls": true,
+  "shimmering-focus@@hide-attachment-folders": false,
+  "shimmering-focus@@show-vault-in-file-explorer": false,
+  "shimmering-focus@@show-file-explorer-navigation": false,
+  "shimmering-focus@@no-tabbar-header-hybrid": false,
+  "shimmering-focus@@no-floating-metadata": false,
+  "shimmering-focus@@mac-os-native": false,
+  "shimmering-focus@@overlaying-right-sidebar": false
+}

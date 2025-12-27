@@ -1,0 +1,1 @@
+{"path":"Amazon Web Services/Images/Pasted image 20230511023733.png","text":"CloudHSM Use Cases @ mwstsemanatia @ s * No Native AWS integration .. e.g. no S3 SSE * Offload the SSL/TLS Processing for Web Servers * Enable Transparent Data Encryption (TDE) for Oracle Databases e Protect the Private Keys for an Issuing Certificate Authority (CA)","libVersion":"0.3.2","langs":"eng"}
