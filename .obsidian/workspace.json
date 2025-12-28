@@ -181,9 +181,29 @@
               "icon": "lucide-ghost",
               "title": "review-queue-list-view"
             }
+          },
+          {
+            "id": "7df5dec70930346e",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "719401fdd824ab82",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "SpacedRepIcon",
+              "title": "Notes Review Queue"
+            }
           }
         ],
-        "currentTab": 7
+        "currentTab": 9
       }
     ],
     "direction": "horizontal",
@@ -204,10 +224,15 @@
       "omnisearch:Omnisearch": false,
       "open-vscode:VSCode": false,
       "mermaid-tools:Open Mermaid Toolbar": false,
-      "media-extended:Open external media": false
+      "media-extended:Open external media": false,
+      "obsidian-excalidraw-plugin:New drawing": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false,
+      "obsidian-kanban:Create new board": false,
+      "obsidian-spaced-repetition:Review flashcards": false,
+      "templater-obsidian:Templater": false
     }
   },
-  "active": "c4dbbf95ba70402a",
+  "active": "719401fdd824ab82",
   "lastOpenFiles": [
     "Book Reviews/Atomic Habits.md",
     "Dataviews/Draft Video-notes.md",
