@@ -16,8 +16,23 @@
               "icon": "home",
               "title": "Media Extended onboarding"
             }
+          },
+          {
+            "id": "c08cfec49487db12",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Notes/_note_Notes.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "_note_Notes"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -201,9 +216,19 @@
               "icon": "lucide-ghost",
               "title": "review-queue-list-view"
             }
+          },
+          {
+            "id": "1a7d1534cb2d8281",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "SpacedRepIcon",
+              "title": "Notes Review Queue"
+            }
           }
         ],
-        "currentTab": 9
+        "currentTab": 10
       }
     ],
     "direction": "horizontal",
@@ -212,23 +237,41 @@
   },
   "left-ribbon": {
     "hiddenItems": {
-      "obsidian-git:Open Git source control": false,
-      "obsidian-markdown-formatting-assistant-plugin:Open Markdown Formatting Assistant": false,
-      "omnisearch:Omnisearch": false,
-      "open-vscode:VSCode": false,
-      "media-extended:Open external media": false,
-      "mermaid-tools:Open Mermaid Toolbar": false,
       "bases:Create new base": false,
       "workspaces:Manage workspace layouts": false,
       "switcher:Open quick switcher": false,
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,
       "templates:Insert template": false,
-      "command-palette:Open command palette": false
+      "command-palette:Open command palette": false,
+      "obsidian-git:Open Git source control": false,
+      "obsidian-markdown-formatting-assistant-plugin:Open Markdown Formatting Assistant": false,
+      "omnisearch:Omnisearch": false,
+      "open-vscode:VSCode": false,
+      "media-extended:Open external media": false,
+      "mermaid-tools:Open Mermaid Toolbar": false,
+      "obsidian-excalidraw-plugin:New drawing": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false,
+      "obsidian-kanban:Create new board": false,
+      "obsidian-spaced-repetition:Review flashcards": false,
+      "templater-obsidian:Templater": false
     }
   },
-  "active": "719401fdd824ab82",
+  "active": "bd2714a80d3d3c1d",
   "lastOpenFiles": [
+    "Excalidraw/_note_Excalidraw.md",
+    "Excalidraw",
+    "ExcaliBrain/_note_ExcaliBrain.md",
+    "Dataviews/_note_Dataviews.md",
+    "Dataviews",
+    "Canvas/_note_Canvas.md",
+    "Canvas",
+    "Bases/_note_Bases.md",
+    "Bases",
+    "--Obsidian Template--/_note_--Obsidian Template--.md",
+    "--Obsidian Template--",
+    "--Attachments--/_note_--Attachments--.md",
+    "--Attachments--",
     "Book Reviews/Atomic Habits.md",
     "Dataviews/Draft Video-notes.md",
     "Motivation.md",
@@ -252,20 +295,7 @@
     "Bases/Justin Sung.base",
     "Bases/Draft.base",
     "Reference Notes/Joe Hudson/Art of Accomplishment/How Connection Can Change Your Life.md",
-    "Reference Notes/Joe Hudson/The Art Of Mastering Your Emotions - Joe Hudson.md",
-    "Reference Notes/Joe Hudson",
-    "Reference Notes/_note_Reference Notes.md",
-    "Reference Notes/Art of Accomplishment/Untitled.md",
-    "Personal Notes/Summarized Learning Methodologies, concepts and learning system.md",
-    "Personal Notes/Learning Visual Process Mapping.md",
-    "Personal Notes/Notes or To-dos.md",
-    "Personal Notes/Learning and productivity techniques to research based on iCanStudy program coverage.md",
-    "Reference Notes/Joe Hudson/Art of Accomplishment",
-    "Bases/Andrew Huberman.base",
     "Canvas/Untitled.canvas",
-    "Bases",
-    "Reference Notes/HealthyGamerGG",
-    "Personal Notes",
     "--Attachments/Pasted image 20250413133349.png",
     "--Attachments/Pasted image 20250413133339.png",
     "--Attachments/Pasted image 20250413133047.png",
