@@ -16,8 +16,23 @@
               "icon": "home",
               "title": "Media Extended onboarding"
             }
+          },
+          {
+            "id": "4fa64864e3f96776",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "--Properties/knowledge-confidence-level.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "knowledge-confidence-level"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -201,9 +216,29 @@
               "icon": "lucide-ghost",
               "title": "review-queue-list-view"
             }
+          },
+          {
+            "id": "1a0962ba6510a4cb",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "9da6686888f50d7d",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "SpacedRepIcon",
+              "title": "Notes Review Queue"
+            }
           }
         ],
-        "currentTab": 9
+        "currentTab": 11
       }
     ],
     "direction": "horizontal",
@@ -224,11 +259,33 @@
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,
       "templates:Insert template": false,
-      "command-palette:Open command palette": false
+      "command-palette:Open command palette": false,
+      "obsidian-excalidraw-plugin:New drawing": false,
+      "table-editor-obsidian:Advanced Tables Toolbar": false,
+      "obsidian-kanban:Create new board": false,
+      "obsidian-spaced-repetition:Review flashcards": false,
+      "templater-obsidian:Templater": false
     }
   },
-  "active": "719401fdd824ab82",
+  "active": "9da6686888f50d7d",
   "lastOpenFiles": [
+    "Knowledge Confidence/Units/Java/Java.md",
+    "Knowledge Confidence/Units/Java/Concurrency.md",
+    "Knowledge Confidence/Units/Java",
+    "Knowledge Confidence/Confidence Levels.base",
+    "Knowledge Confidence/Units",
+    "Knowledge Confidence",
+    "Excalidraw/_note_Excalidraw.md",
+    "--Properties/knowledge-confidence-level.md",
+    "--Properties",
+    "ExcaliBrain/_note_ExcaliBrain.md",
+    "ExcaliBrain/excalibrain.md",
+    "References/_note_References.md",
+    "Dataviews/_note_Dataviews.md",
+    "Canvas/_note_Canvas.md",
+    "Bases/_note_Bases.md",
+    "--Obsidian Template--/_note_--Obsidian Template--.md",
+    "--Attachments--/_note_--Attachments--.md",
     "Book Reviews/Atomic Habits.md",
     "Dataviews/Draft Video-notes.md",
     "Motivation.md",
@@ -243,29 +300,12 @@
     "--Explore/Primary learning methodologies to focus.md",
     "Personal Notes/Summarized Self-management Guidelines.md",
     "--Attachments/Dr K. Explains - Escaping Your Ego Free Members Lecture) 2025-08-24 20.00.57.excalidraw.md",
-    "Reference Notes/HealthyGamerGG/Drawing 2025-08-24 20.00.32.excalidraw.md",
-    "Reference Notes/HealthyGamerGG/5 Habits that Changed My Life.md",
     "Bases/HealthyGamerGG.base",
-    "Reference Notes/Joe Hudson/Joe Hudson Core Principles.md",
-    "Reference Notes/Joe Hudson/How to Embrace the Emotions You Resist & Find Lasting Freedom.md",
     "Bases/Joe Hudson.base",
     "Bases/Justin Sung.base",
     "Bases/Draft.base",
-    "Reference Notes/Joe Hudson/Art of Accomplishment/How Connection Can Change Your Life.md",
-    "Reference Notes/Joe Hudson/The Art Of Mastering Your Emotions - Joe Hudson.md",
     "Reference Notes/Joe Hudson",
-    "Reference Notes/_note_Reference Notes.md",
-    "Reference Notes/Art of Accomplishment/Untitled.md",
-    "Personal Notes/Summarized Learning Methodologies, concepts and learning system.md",
-    "Personal Notes/Learning Visual Process Mapping.md",
-    "Personal Notes/Notes or To-dos.md",
-    "Personal Notes/Learning and productivity techniques to research based on iCanStudy program coverage.md",
-    "Reference Notes/Joe Hudson/Art of Accomplishment",
-    "Bases/Andrew Huberman.base",
     "Canvas/Untitled.canvas",
-    "Bases",
-    "Reference Notes/HealthyGamerGG",
-    "Personal Notes",
     "--Attachments/Pasted image 20250413133349.png",
     "--Attachments/Pasted image 20250413133339.png",
     "--Attachments/Pasted image 20250413133047.png",

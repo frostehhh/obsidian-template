@@ -1,0 +1,13 @@
+---
+knowledge-confidence-level:
+- 1 - Critical lack of confidence
+- 2 - Greatly needs improvement
+- 3 - Needs improvement
+- 4 - Somewhat hesitant
+- 5 - Neutral
+- 6 - Moderately confident
+- 7 - Confident
+- 8 - Very confident
+- 9 - Extremely confident
+- 10 - Mastery
+---
