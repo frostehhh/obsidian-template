@@ -1,0 +1,13 @@
+filters:
+  and:
+    - file.folder.startsWith("Knowledge Confidence/Units")
+views:
+  - type: table
+    name: All
+    order:
+      - file.name
+      - knowledge-confidence-level
+      - "Parent:"
+    columnSize:
+      file.name: 142
+      note.knowledge-confidence-level: 216
