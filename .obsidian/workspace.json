@@ -13,8 +13,8 @@
             "state": {
               "type": "mx-welcome",
               "state": {},
-              "icon": "lucide-ghost",
-              "title": "mx-welcome"
+              "icon": "home",
+              "title": "Media Extended onboarding"
             }
           }
         ]
@@ -212,6 +212,12 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "obsidian-git:Open Git source control": false,
+      "obsidian-markdown-formatting-assistant-plugin:Open Markdown Formatting Assistant": false,
+      "omnisearch:Omnisearch": false,
+      "open-vscode:VSCode": false,
+      "media-extended:Open external media": false,
+      "mermaid-tools:Open Mermaid Toolbar": false,
       "bases:Create new base": false,
       "workspaces:Manage workspace layouts": false,
       "switcher:Open quick switcher": false,
