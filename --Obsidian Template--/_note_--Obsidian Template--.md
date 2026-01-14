@@ -1,0 +1,1 @@
+Contains Obsidian Template notes
