@@ -21,14 +21,13 @@
             "id": "c08cfec49487db12",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "bases",
               "state": {
-                "file": "Notes/_note_Notes.md",
-                "mode": "source",
-                "source": false
+                "file": "Knowledge Confidence/Confidence Levels.base",
+                "viewName": "All"
               },
-              "icon": "lucide-file",
-              "title": "_note_Notes"
+              "icon": "lucide-table",
+              "title": "Confidence Levels"
             }
           }
         ],
@@ -223,12 +222,22 @@
             "state": {
               "type": "review-queue-list-view",
               "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "4e896662f66c6cc0",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
               "icon": "SpacedRepIcon",
               "title": "Notes Review Queue"
             }
           }
         ],
-        "currentTab": 10
+        "currentTab": 11
       }
     ],
     "direction": "horizontal",
@@ -257,8 +266,9 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "bd2714a80d3d3c1d",
+  "active": "4e896662f66c6cc0",
   "lastOpenFiles": [
+    "Notes/_note_Notes.md",
     "Excalidraw/_note_Excalidraw.md",
     "Excalidraw",
     "ExcaliBrain/_note_ExcaliBrain.md",
@@ -294,7 +304,6 @@
     "Bases/Joe Hudson.base",
     "Bases/Justin Sung.base",
     "Bases/Draft.base",
-    "Reference Notes/Joe Hudson/Art of Accomplishment/How Connection Can Change Your Life.md",
     "Canvas/Untitled.canvas",
     "--Attachments/Pasted image 20250413133349.png",
     "--Attachments/Pasted image 20250413133339.png",

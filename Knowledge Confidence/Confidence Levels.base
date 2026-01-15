@@ -1,6 +1,7 @@
 filters:
   and:
-    - file.folder.startsWith("Knowledge Confidence/Units")
+    - '!note["knowledge-confidence-level"].isEmpty()'
+    - file.folder != "--Properties"
 views:
   - type: table
     name: All
