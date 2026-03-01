@@ -4,34 +4,20 @@
     "type": "split",
     "children": [
       {
-        "id": "695574e32f712a98",
+        "id": "827759a9b2e52bc5",
         "type": "tabs",
         "children": [
           {
-            "id": "95e2357123ba1b42",
+            "id": "dd278a36a5db6c68",
             "type": "leaf",
             "state": {
-              "type": "mx-welcome",
+              "type": "style-settings",
               "state": {},
-              "icon": "home",
-              "title": "Media Extended onboarding"
-            }
-          },
-          {
-            "id": "c08cfec49487db12",
-            "type": "leaf",
-            "state": {
-              "type": "bases",
-              "state": {
-                "file": "Knowledge Confidence/Confidence Levels.base",
-                "viewName": "All"
-              },
-              "icon": "lucide-table",
-              "title": "Confidence Levels"
+              "icon": "gear",
+              "title": "Style Settings"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -242,12 +228,32 @@
             "state": {
               "type": "review-queue-list-view",
               "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "10a0a820094efe54",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "fe7037aa12c38cb4",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
               "icon": "SpacedRepIcon",
               "title": "Notes Review Queue"
             }
           }
         ],
-        "currentTab": 12
+        "currentTab": 14
       }
     ],
     "direction": "horizontal",
@@ -276,8 +282,9 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "b0a02477d29e3c99",
+  "active": "fe7037aa12c38cb4",
   "lastOpenFiles": [
+    "Knowledge Confidence/Confidence Levels.base",
     "Notes/_note_Notes.md",
     "Excalidraw/_note_Excalidraw.md",
     "Excalidraw",
@@ -310,7 +317,6 @@
     "Reference Notes/HealthyGamerGG/5 Habits that Changed My Life.md",
     "Bases/HealthyGamerGG.base",
     "Reference Notes/Joe Hudson/Joe Hudson Core Principles.md",
-    "Reference Notes/Joe Hudson/How to Embrace the Emotions You Resist & Find Lasting Freedom.md",
     "Bases/Joe Hudson.base",
     "Bases/Justin Sung.base",
     "Bases/Draft.base",
