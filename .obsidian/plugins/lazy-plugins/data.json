@@ -113,6 +113,9 @@
       },
       "tag-wrangler": {
         "startupType": "long"
+      },
+      "advanced-canvas": {
+        "startupType": "instant"
       }
     },
     "loadOrder": []

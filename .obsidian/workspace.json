@@ -232,12 +232,22 @@
             "state": {
               "type": "review-queue-list-view",
               "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "b0a02477d29e3c99",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
               "icon": "SpacedRepIcon",
               "title": "Notes Review Queue"
             }
           }
         ],
-        "currentTab": 11
+        "currentTab": 12
       }
     ],
     "direction": "horizontal",
@@ -266,7 +276,7 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "4e896662f66c6cc0",
+  "active": "b0a02477d29e3c99",
   "lastOpenFiles": [
     "Notes/_note_Notes.md",
     "Excalidraw/_note_Excalidraw.md",
