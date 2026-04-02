@@ -4,17 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "827759a9b2e52bc5",
+        "id": "0f7a51f86d312607",
         "type": "tabs",
         "children": [
           {
-            "id": "dd278a36a5db6c68",
+            "id": "a2f0bed5425d0f61",
             "type": "leaf",
             "state": {
-              "type": "style-settings",
+              "type": "empty",
               "state": {},
-              "icon": "gear",
-              "title": "Style Settings"
+              "icon": "lucide-file",
+              "title": "New tab"
             }
           }
         ]
@@ -248,12 +248,32 @@
             "state": {
               "type": "review-queue-list-view",
               "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "1c90d4cb38284428",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "a59ffe03f393d83d",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
               "icon": "SpacedRepIcon",
               "title": "Notes Review Queue"
             }
           }
         ],
-        "currentTab": 14
+        "currentTab": 16
       }
     ],
     "direction": "horizontal",
@@ -282,10 +302,18 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "fe7037aa12c38cb4",
+  "active": "a59ffe03f393d83d",
   "lastOpenFiles": [
-    "Knowledge Confidence/Confidence Levels.base",
+    "--Obsidian Template--/Frontmatter/Reference Note.md",
+    "--Obsidian Template--/_note_--Obsidian Template--.md",
+    "--Obsidian Template--/Frontmatter",
+    "--Obsidian Template--/Frontmatter/Note.md",
+    "--Properties--/knowledge-confidence-level.md",
+    "Reference Notes/_note_Reference Notes.md",
+    "Reference Notes",
     "Notes/_note_Notes.md",
+    "--Obsidian Template--/Reference Notes",
+    "Knowledge Confidence/Confidence Levels.base",
     "Excalidraw/_note_Excalidraw.md",
     "Excalidraw",
     "ExcaliBrain/_note_ExcaliBrain.md",
@@ -295,7 +323,6 @@
     "Canvas",
     "Bases/_note_Bases.md",
     "Bases",
-    "--Obsidian Template--/_note_--Obsidian Template--.md",
     "--Obsidian Template--",
     "--Attachments--/_note_--Attachments--.md",
     "--Attachments--",
@@ -312,14 +339,6 @@
     "--Explore/Studying connected concepts in the same session.md",
     "--Explore/Primary learning methodologies to focus.md",
     "Personal Notes/Summarized Self-management Guidelines.md",
-    "--Attachments/Dr K. Explains - Escaping Your Ego Free Members Lecture) 2025-08-24 20.00.57.excalidraw.md",
-    "Reference Notes/HealthyGamerGG/Drawing 2025-08-24 20.00.32.excalidraw.md",
-    "Reference Notes/HealthyGamerGG/5 Habits that Changed My Life.md",
-    "Bases/HealthyGamerGG.base",
-    "Reference Notes/Joe Hudson/Joe Hudson Core Principles.md",
-    "Bases/Joe Hudson.base",
-    "Bases/Justin Sung.base",
-    "Bases/Draft.base",
     "Canvas/Untitled.canvas",
     "--Attachments/Pasted image 20250413133349.png",
     "--Attachments/Pasted image 20250413133339.png",
