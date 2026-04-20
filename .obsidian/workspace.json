@@ -268,12 +268,22 @@
             "state": {
               "type": "review-queue-list-view",
               "state": {},
+              "icon": "lucide-ghost",
+              "title": "review-queue-list-view"
+            }
+          },
+          {
+            "id": "28faf53ac8f84a91",
+            "type": "leaf",
+            "state": {
+              "type": "review-queue-list-view",
+              "state": {},
               "icon": "SpacedRepIcon",
               "title": "Notes Review Queue"
             }
           }
         ],
-        "currentTab": 16
+        "currentTab": 17
       }
     ],
     "direction": "horizontal",
@@ -302,7 +312,7 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "a59ffe03f393d83d",
+  "active": "28faf53ac8f84a91",
   "lastOpenFiles": [
     "--Obsidian Template--/Frontmatter/Reference Note.md",
     "--Obsidian Template--/_note_--Obsidian Template--.md",
