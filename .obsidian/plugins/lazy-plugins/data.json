@@ -116,6 +116,9 @@
       },
       "advanced-canvas": {
         "startupType": "instant"
+      },
+      "quickadd": {
+        "startupType": "instant"
       }
     },
     "loadOrder": []

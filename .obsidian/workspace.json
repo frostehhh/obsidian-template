@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "0f7a51f86d312607",
+        "id": "a221678ed3108772",
         "type": "tabs",
         "children": [
           {
-            "id": "a2f0bed5425d0f61",
+            "id": "24751762187036a0",
             "type": "leaf",
             "state": {
               "type": "empty",
@@ -124,7 +124,9 @@
               "type": "tag",
               "state": {
                 "sortOrder": "frequency",
-                "useHierarchy": true
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
               },
               "icon": "lucide-tags",
               "title": "Tags"
@@ -143,147 +145,17 @@
             }
           },
           {
-            "id": "b7a897f0c88ab5ce",
-            "type": "leaf",
-            "state": {
-              "type": "git-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "git-view"
-            }
-          },
-          {
             "id": "fa3086fb0ad06606",
             "type": "leaf",
             "state": {
               "type": "side-panel-control-view",
               "state": {},
-              "icon": "lucide-ghost",
-              "title": "side-panel-control-view"
-            }
-          },
-          {
-            "id": "4265431c93419ccb",
-            "type": "leaf",
-            "state": {
-              "type": "advanced-tables-toolbar",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "advanced-tables-toolbar"
-            }
-          },
-          {
-            "id": "c4dbbf95ba70402a",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "7df5dec70930346e",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "719401fdd824ab82",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "1a7d1534cb2d8281",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "4e896662f66c6cc0",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "b0a02477d29e3c99",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "10a0a820094efe54",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "fe7037aa12c38cb4",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "1c90d4cb38284428",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "a59ffe03f393d83d",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "lucide-ghost",
-              "title": "review-queue-list-view"
-            }
-          },
-          {
-            "id": "28faf53ac8f84a91",
-            "type": "leaf",
-            "state": {
-              "type": "review-queue-list-view",
-              "state": {},
-              "icon": "SpacedRepIcon",
-              "title": "Notes Review Queue"
+              "icon": "viewIcon",
+              "title": "Markdown-Autocomplete"
             }
           }
         ],
-        "currentTab": 17
+        "currentTab": 2
       }
     ],
     "direction": "horizontal",
@@ -312,7 +184,7 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "28faf53ac8f84a91",
+  "active": "24751762187036a0",
   "lastOpenFiles": [
     "--Obsidian Template--/Frontmatter/Reference Note.md",
     "--Obsidian Template--/_note_--Obsidian Template--.md",

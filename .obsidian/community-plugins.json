@@ -1,6 +1,5 @@
 [
   "obsidian-icon-folder",
-  "obsidian-git",
   "obsidian-style-settings",
   "obsidian-linter",
   "obsidian-markdown-formatting-assistant-plugin",
@@ -15,5 +14,6 @@
   "editing-toolbar",
   "mermaid-tools",
   "advanced-canvas",
-  "quickadd"
+  "quickadd",
+  "supercharged-links-obsidian"
 ]
