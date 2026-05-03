@@ -40,7 +40,7 @@
         "startupType": "long"
       },
       "obsidian-git": {
-        "startupType": "instant"
+        "startupType": "disabled"
       },
       "simple-embeds": {
         "startupType": "short"
@@ -91,10 +91,10 @@
         "startupType": "long"
       },
       "obsidian-spaced-repetition": {
-        "startupType": "long"
+        "startupType": "disabled"
       },
       "supercharged-links-obsidian": {
-        "startupType": "disabled"
+        "startupType": "instant"
       },
       "obsidian-hover-editor": {
         "startupType": "instant"
