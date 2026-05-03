@@ -1,5 +1,26 @@
 {
-  "choices": [],
+  "choices": [
+    {
+      "id": "142e2b9e-3ea1-438f-b052-adcee39de534",
+      "name": "test",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "test",
+        "id": "bc2952cf-5934-4f90-b584-076f053bdc0a",
+        "commands": [
+          {
+            "name": "test",
+            "type": "UserScript",
+            "id": "71a43c62-cc8b-4ec4-9c70-fc5eec1fcad7",
+            "path": "--Scripts--/QuickAdd/test.js",
+            "settings": {}
+          }
+        ]
+      }
+    }
+  ],
   "inputPrompt": "single-line",
   "persistInputPromptDrafts": true,
   "useSelectionAsCaptureValue": true,
