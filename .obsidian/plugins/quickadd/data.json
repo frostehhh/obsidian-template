@@ -11,10 +11,50 @@
         "id": "bc2952cf-5934-4f90-b584-076f053bdc0a",
         "commands": [
           {
-            "name": "test",
+          "name": "test",
             "type": "UserScript",
             "id": "71a43c62-cc8b-4ec4-9c70-fc5eec1fcad7",
             "path": "--Scripts--/QuickAdd/test.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "2f64a7cb-5ef6-47c5-821a-b40e61c2b239",
+      "name": "Wrap file in folder",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "Wrap file in folder",
+        "id": "31a3340d-ffa8-4ef2-a582-554f78e69a15",
+        "commands": [
+          {
+            "name": "qa-wrapFileInFolder",
+            "type": "UserScript",
+            "id": "43b86b9a-d723-4a64-8919-92a0b79d9694",
+            "path": "--Scripts--/QuickAdd/qa-wrapFileInFolder.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "d136e547-a540-4227-9099-b2912131d5fc",
+      "name": "Create folder base",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "Create folder base",
+        "id": "ff7a4a56-6495-4d4d-b5f4-0e27d95c8b55",
+        "commands": [
+          {
+            "name": "qa-createBaseForFolder",
+            "type": "UserScript",
+            "id": "20706b04-caac-4ddb-b9e6-f32a596d09a8",
+            "path": "--Scripts--/QuickAdd/qa-createBaseForFolder.js",
             "settings": {}
           }
         ]
