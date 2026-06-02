@@ -119,6 +119,9 @@
       },
       "quickadd": {
         "startupType": "instant"
+      },
+      "tasknotes": {
+        "startupType": "instant"
       }
     },
     "loadOrder": []

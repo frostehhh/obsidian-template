@@ -8,8 +8,8 @@
   "hideIdentifyingTagsMode": "all",
   "taskPropertyName": "",
   "taskPropertyValue": "",
-  "excludedFolders": "",
-  "defaultTaskPriority": "normal",
+  "excludedFolders": "--Attachments--, --Obsidian Template--, --Properties--, --Scripts--, Bases, Canvas, Dataviews, Excalibrain, Excalidraw",
+  "defaultTaskPriority": "none",
   "defaultTaskStatus": "open",
   "taskOrgFiltersCollapsed": false,
   "taskFilenameFormat": "zettel",
@@ -226,25 +226,53 @@
       "weight": 0
     },
     {
-      "id": "low",
-      "value": "low",
-      "label": "Low",
-      "color": "#00aa00",
+      "id": "priority_1780414327662",
+      "value": "6-deferred",
+      "label": "Deferred",
+      "color": "#858a9e",
       "weight": 1
     },
     {
-      "id": "normal",
-      "value": "normal",
-      "label": "Normal",
-      "color": "#ffaa00",
+      "id": "priority_1780414308326",
+      "value": "5-minor",
+      "label": "Minor",
+      "color": "#1e43d6",
       "weight": 2
     },
     {
-      "id": "high",
-      "value": "high",
-      "label": "High",
-      "color": "#ff0000",
+      "id": "priority_1780414295066",
+      "value": "4-below-average",
+      "label": "Below Average",
+      "color": "#15bee8",
       "weight": 3
+    },
+    {
+      "id": "priority_1780414264975",
+      "value": "3-average",
+      "label": "Average",
+      "color": "#19e04e",
+      "weight": 4
+    },
+    {
+      "id": "low",
+      "value": "2-above-average",
+      "label": "Above Average",
+      "color": "#e8e515",
+      "weight": 5
+    },
+    {
+      "id": "normal",
+      "value": "1-high",
+      "label": "High",
+      "color": "#db4214",
+      "weight": 6
+    },
+    {
+      "id": "high",
+      "value": "0-superior",
+      "label": "Superior",
+      "color": "#db1414",
+      "weight": 7
     }
   ],
   "recurrenceMigrated": false,
