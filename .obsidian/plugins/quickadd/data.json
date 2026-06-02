@@ -11,7 +11,7 @@
         "id": "bc2952cf-5934-4f90-b584-076f053bdc0a",
         "commands": [
           {
-          "name": "test",
+            "name": "test",
             "type": "UserScript",
             "id": "71a43c62-cc8b-4ec4-9c70-fc5eec1fcad7",
             "path": "--Scripts--/QuickAdd/test.js",
@@ -55,6 +55,46 @@
             "type": "UserScript",
             "id": "20706b04-caac-4ddb-b9e6-f32a596d09a8",
             "path": "--Scripts--/QuickAdd/qa-createBaseForFolder.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "ce91cb2e-b909-40fa-9d0f-7f5dc48026a6",
+      "name": "TaskNotes - Create task for folder",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "TaskNotes - Create task for folder",
+        "id": "d7b6db91-356e-4351-908b-3498410063fe",
+        "commands": [
+          {
+            "name": "qa-taskNotes-createTaskForFolder",
+            "type": "UserScript",
+            "id": "9049952c-09ef-4f4f-9fae-574618392ebb",
+            "path": "--Scripts--/QuickAdd/qa-taskNotes-createTaskForFolder.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "7836d84f-9429-403b-bca4-eae015d920b3",
+      "name": "TaskNotes - Create folder base",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "TaskNotes - Create folder base",
+        "id": "4177433a-02e3-439a-b422-454beffc77fb",
+        "commands": [
+          {
+            "name": "qa-taskNotes-createTasksDefaultForFolder",
+            "type": "UserScript",
+            "id": "13f561ac-74b2-40fd-a781-1ea80605dca6",
+            "path": "--Scripts--/QuickAdd/qa-taskNotes-createTasksDefaultForFolder.js",
             "settings": {}
           }
         ]
