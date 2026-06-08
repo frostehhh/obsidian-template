@@ -237,7 +237,7 @@ async function main() {
   let syncDataJson = config.syncDataJson ?? false;
   if (!syncDataJson) {
     const answer = await p.confirm({
-      message: 'Also overwrite data.json (plugin settings)?',
+      message: 'Overwrite existing data.json if it exists (plugin settings)?',
       initialValue: false,
     });
     if (p.isCancel(answer)) cancel();
@@ -269,7 +269,12 @@ async function main() {
       for (const entry of allFiles) {
         if (!entry.isFile()) continue;
         if (!syncDataJson && DATA_FILES.has(entry.name)) {
-          filesToSkip.push(entry.name);
+          const destExists = await pathExists(join(destDir, entry.name));
+          if (destExists) {
+            filesToSkip.push(entry.name);
+          } else {
+            filesToCopy.push(entry.name);
+          }
         } else {
           filesToCopy.push(entry.name);
         }
