@@ -8,7 +8,7 @@ const TEMPLATE_DIR = join(REPO_ROOT, 'template');
 const TEMPLATE_PLUGINS_DIR = join(TEMPLATE_DIR, '.obsidian', 'plugins');
 const TEMPLATE_OBSIDIAN_DIR = join(TEMPLATE_DIR, '.obsidian');
 const OBSIDIAN_ROOT = dirname(REPO_ROOT);
-const CONFIG_PATH = join(REPO_ROOT, 'sync-plugins.config.json');
+const CONFIG_PATH = join(REPO_ROOT, 'sync.config.json');
 const DATA_FILES = new Set(['data.json', 'genericPreviewCache.json']);
 
 const PLUGIN_DIR_CONDITIONS = [
@@ -107,7 +107,7 @@ async function main() {
   }
 
   // Step 2: Intro
-  p.intro('  sync-plugins  —  Obsidian Template Vault');
+  p.intro('  sync  —  Obsidian Template Vault');
 
   // Step 3: Discover plugins
   const pluginDirs = await readdir(TEMPLATE_PLUGINS_DIR);
