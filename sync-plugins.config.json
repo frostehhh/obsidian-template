@@ -21,5 +21,7 @@
     "templater-obsidian"
   ],
   "defaultVaults": [],
-  "syncDataJson": false
+  "syncDataJson": false,
+  "defaultDirs": ["--Attachments--", "--Obsidian Template--", "Bases", "Notes"],
+  "defaultSettings": ["templates.json"]
 }

@@ -4,14 +4,44 @@ import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const TEMPLATE_PLUGINS_DIR = join(REPO_ROOT, 'template', '.obsidian', 'plugins');
+const TEMPLATE_DIR = join(REPO_ROOT, 'template');
+const TEMPLATE_PLUGINS_DIR = join(TEMPLATE_DIR, '.obsidian', 'plugins');
+const TEMPLATE_OBSIDIAN_DIR = join(TEMPLATE_DIR, '.obsidian');
 const OBSIDIAN_ROOT = dirname(REPO_ROOT);
 const CONFIG_PATH = join(REPO_ROOT, 'sync-plugins.config.json');
 const DATA_FILES = new Set(['data.json', 'genericPreviewCache.json']);
 
-async function pathExists(p) {
+const PLUGIN_DIR_CONDITIONS = [
+  { pluginId: 'quickadd',                   dir: '--Scripts--' },
+  { pluginId: 'tasknotes',                  dir: 'TaskNotes' },
+  { pluginId: 'excalibrain',                dir: 'Excalibrain' },
+  { pluginId: 'obsidian-excalidraw-plugin', dir: 'Excalidraw' },
+];
+
+const DIR_OPTIONS = [
+  '--Attachments--',
+  '--Obsidian Template--',
+  '--Properties--',
+  'Bases',
+  'Canvas',
+  'Dataviews',
+  'Notes',
+  'Reference Notes',
+  'References',
+];
+
+const SETTINGS_ITEMS = [
+  'snippets',
+  'themes',
+  'app.json',
+  'appearance.json',
+  'templates.json',
+  'types.json',
+];
+
+async function pathExists(target) {
   try {
-    await stat(p);
+    await stat(target);
     return true;
   } catch {
     return false;
@@ -29,6 +59,16 @@ async function copyRecursive(src, dest) {
     } else {
       await copyFile(srcPath, destPath);
     }
+  }
+}
+
+async function copyAny(src, dest) {
+  const info = await stat(src);
+  if (info.isDirectory()) {
+    await copyRecursive(src, dest);
+  } else {
+    await mkdir(dirname(dest), { recursive: true });
+    await copyFile(src, dest);
   }
 }
 
@@ -88,6 +128,7 @@ async function main() {
     if (await pathExists(pluginsDir)) {
       vaults.push({
         name: entry.name,
+        root: join(OBSIDIAN_ROOT, entry.name),
         pluginsDir,
         communityPluginsPath: join(OBSIDIAN_ROOT, entry.name, '.obsidian', 'community-plugins.json'),
       });
@@ -132,12 +173,46 @@ async function main() {
     const pluginsDir = join(resolvedPath, '.obsidian', 'plugins');
     vaults.push({
       name: vaultName,
+      root: resolvedPath,
       pluginsDir,
       communityPluginsPath: join(resolvedPath, '.obsidian', 'community-plugins.json'),
     });
-    // Replace sentinel with the resolved vault name
     selectedVaultNames.splice(selectedVaultNames.indexOf(MANUAL_SENTINEL), 1, vaultName);
   }
+
+  // Step 6b: Directory sync selection
+  const autoDirs = PLUGIN_DIR_CONDITIONS
+    .filter((c) => selectedPluginIds.includes(c.pluginId))
+    .map((c) => c.dir);
+
+  if (autoDirs.length > 0) {
+    p.log.info(
+      `Auto-included directories (based on plugin selection):\n${autoDirs.map((d) => `  ${d}`).join('\n')}`
+    );
+  }
+
+  const selectedDirs = await p.multiselect({
+    message: 'Select content directories to sync',
+    options: DIR_OPTIONS.map((dir) => ({ value: dir, label: dir })),
+    initialValues: config.defaultDirs ?? ['--Attachments--', '--Obsidian Template--', 'Bases', 'Notes'],
+    required: false,
+  });
+  if (p.isCancel(selectedDirs)) cancel();
+
+  const finalDirs = [...new Set([...(selectedDirs ?? []), ...autoDirs])];
+
+  // Step 6c: Obsidian settings sync selection
+  const selectedSettings = await p.multiselect({
+    message: 'Select Obsidian settings to sync',
+    options: SETTINGS_ITEMS.map((item) => ({
+      value: item,
+      label: item,
+      hint: item.endsWith('.json') ? 'file' : 'directory',
+    })),
+    initialValues: config.defaultSettings ?? [],
+    required: false,
+  });
+  if (p.isCancel(selectedSettings)) cancel();
 
   // Step 7: data.json opt-in
   let syncDataJson = config.syncDataJson ?? false;
@@ -173,7 +248,7 @@ async function main() {
       const filesToCopy = [];
       const filesToSkip = [];
       for (const entry of allFiles) {
-        if (!entry.isFile()) continue; // directories handled by copyRecursive
+        if (!entry.isFile()) continue;
         if (!syncDataJson && DATA_FILES.has(entry.name)) {
           filesToSkip.push(entry.name);
         } else {
@@ -181,7 +256,6 @@ async function main() {
         }
       }
 
-      // Check for subdirectories (e.g. icons/ in obsidian-icon-folder)
       const subDirs = allFiles.filter((e) => e.isDirectory()).map((e) => e.name);
 
       plan.push({
@@ -215,33 +289,40 @@ async function main() {
     }
   }
 
+  if (finalDirs.length > 0) {
+    const userDirs = finalDirs.filter((d) => !autoDirs.includes(d));
+    const parts = [];
+    if (userDirs.length > 0) parts.push(userDirs.join(', '));
+    if (autoDirs.length > 0) parts.push(`+auto: ${autoDirs.join(', ')}`);
+    p.log.info(`Directories: ${parts.join('  ')}`);
+  }
+
+  if ((selectedSettings ?? []).length > 0) {
+    p.log.info(`Settings:    ${selectedSettings.join(', ')}`);
+  }
+
   const proceed = await p.confirm({ message: 'Proceed with sync?', initialValue: true });
   if (p.isCancel(proceed) || !proceed) cancel();
 
   // Step 10: Execute sync
   const s = p.spinner();
-  s.start('Syncing plugins...');
+  s.start('Syncing...');
 
-  let totalFiles = 0;
-  const communityPluginUpdates = new Map(); // vault name → updated array
+  const communityPluginUpdates = new Map();
 
+  // Sync plugins
   for (const entry of plan) {
-    s.message(`Syncing ${entry.plugin.name} → ${entry.vault.name}`);
+    s.message(`Syncing plugin ${entry.plugin.name} → ${entry.vault.name}`);
     await mkdir(entry.destDir, { recursive: true });
 
-    // Copy top-level files
     for (const file of entry.filesToCopy) {
       await copyFile(join(entry.srcDir, file), join(entry.destDir, file));
-      totalFiles++;
     }
 
-    // Copy subdirectories recursively
     for (const subDir of entry.subDirs) {
       await copyRecursive(join(entry.srcDir, subDir), join(entry.destDir, subDir));
-      totalFiles++;
     }
 
-    // Track community-plugins.json updates
     if (entry.addToCommunityPlugins) {
       const key = entry.vault.name;
       const current = communityPluginUpdates.get(key) ?? [...entry.existingCommunityPlugins];
@@ -250,7 +331,6 @@ async function main() {
     }
   }
 
-  // Write community-plugins.json updates
   for (const vault of selectedVaults) {
     const updated = communityPluginUpdates.get(vault.name);
     if (updated) {
@@ -258,11 +338,35 @@ async function main() {
     }
   }
 
+  // Sync content directories
+  for (const vault of selectedVaults) {
+    for (const dir of finalDirs) {
+      const src = join(TEMPLATE_DIR, dir);
+      const dest = join(vault.root, dir);
+      if (await pathExists(src)) {
+        s.message(`Syncing directory ${dir} → ${vault.name}`);
+        await copyRecursive(src, dest);
+      }
+    }
+  }
+
+  // Sync Obsidian settings
+  for (const vault of selectedVaults) {
+    for (const item of (selectedSettings ?? [])) {
+      const src = join(TEMPLATE_OBSIDIAN_DIR, item);
+      const dest = join(vault.root, '.obsidian', item);
+      if (await pathExists(src)) {
+        s.message(`Syncing .obsidian/${item} → ${vault.name}`);
+        await copyAny(src, dest);
+      }
+    }
+  }
+
   s.stop('Sync complete.');
 
   // Step 11: Outro
   p.outro(
-    `Done! Synced ${selectedPlugins.length} plugin(s) across ${selectedVaults.length} vault(s).`
+    `Done! Synced ${selectedPlugins.length} plugin(s), ${finalDirs.length} director${finalDirs.length === 1 ? 'y' : 'ies'}, and ${(selectedSettings ?? []).length} setting(s) across ${selectedVaults.length} vault(s).`
   );
 }
 
