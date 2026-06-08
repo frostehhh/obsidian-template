@@ -1,0 +1,11 @@
+{
+  "name": "obsidian-template-tools",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "sync-plugins": "node scripts/sync-plugins.js"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.0"
+  }
+}

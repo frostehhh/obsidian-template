@@ -1,0 +1,25 @@
+{
+  "defaultPlugins": [
+    "code-block-copy",
+    "dataview",
+    "editing-toolbar",
+    "excalibrain",
+    "folder-notes",
+    "highlightr-plugin",
+    "lazy-plugins",
+    "obsidian-excalidraw-plugin",
+    "obsidian-hover-editor",
+    "obsidian-icon-folder",
+    "obsidian-linter",
+    "obsidian-markdown-formatting-assistant-plugin",
+    "obsidian-style-settings",
+    "omnisearch",
+    "quickadd",
+    "supercharged-links-obsidian",
+    "table-editor-obsidian",
+    "tag-wrangler",
+    "templater-obsidian"
+  ],
+  "defaultVaults": [],
+  "syncDataJson": false
+}
