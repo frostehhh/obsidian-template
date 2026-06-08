@@ -144,7 +144,7 @@
     "contexts": "contexts",
     "projects": "projects",
     "timeEstimate": "timeEstimate",
-    "completedDate": "completedDate",
+    "completedDate": "dateCompleted",
     "dateCreated": "dateCreated",
     "dateModified": "dateModified",
     "recurrence": "recurrence",
@@ -192,19 +192,47 @@
       "excludeFromCycle": false,
       "order": 1,
       "autoArchive": false,
-      "autoArchiveDelay": 5
+      "autoArchiveDelay": 5,
+      "nextStatus": "pending"
     },
     {
       "id": "status_1780485791878",
       "value": "pending",
       "label": "Pending",
-      "color": "#eb1f10",
+      "color": "#f26055",
       "completed": false,
       "isCompleted": false,
       "excludeFromCycle": false,
       "order": 2,
       "autoArchive": false,
-      "autoArchiveDelay": 5
+      "autoArchiveDelay": 5,
+      "nextStatus": "in-progress"
+    },
+    {
+      "id": "status_1780922159840",
+      "value": "blocked",
+      "label": "Blocked",
+      "color": "#eb1f10",
+      "completed": false,
+      "isCompleted": false,
+      "excludeFromCycle": true,
+      "order": 3,
+      "autoArchive": false,
+      "autoArchiveDelay": 5,
+      "nextStatus": "in-progress"
+    },
+    {
+      "id": "status_1780922066848",
+      "value": "on-hold",
+      "label": "On hold",
+      "color": "#ed861f",
+      "completed": false,
+      "isCompleted": false,
+      "excludeFromCycle": false,
+      "order": 4,
+      "autoArchive": false,
+      "autoArchiveDelay": 5,
+      "nextStatus": "in-progress"
     },
     {
       "id": "in-progress",
@@ -213,7 +241,7 @@
       "color": "#ebeb10",
       "isCompleted": false,
       "excludeFromCycle": false,
-      "order": 3,
+      "order": 5,
       "autoArchive": false,
       "autoArchiveDelay": 5
     },
@@ -224,7 +252,7 @@
       "color": "#00aa00",
       "isCompleted": true,
       "excludeFromCycle": false,
-      "order": 4,
+      "order": 6,
       "autoArchive": false,
       "autoArchiveDelay": 5
     }

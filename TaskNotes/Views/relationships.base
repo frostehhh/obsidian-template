@@ -3,7 +3,7 @@
 # Dynamically shows/hides tabs based on available data
 
 formulas:
-  priorityWeight: 'if(priority=="none",0,if(priority=="low",1,if(priority=="normal",2,if(priority=="high",3,999))))'
+  priorityWeight: 'if(priority=="none",0,if(priority=="6-deferred",1,if(priority=="5-minor",2,if(priority=="4-below-average",3,if(priority=="3-average",4,if(priority=="2-above-average",5,if(priority=="1-high",6,if(priority=="0-superior",7,999))))))))'
   daysUntilDue: 'if((due.isEmpty() == false), ((number(date(due)) - number(today())) / 86400000).floor(), null)'
   dueIn: 'if(due.isEmpty(), "", if(formula.daysUntilDue == 0, "Today", if(formula.daysUntilDue == 1, "1 day", if(formula.daysUntilDue > 1, formula.daysUntilDue + " days", if(formula.daysUntilDue == -1, "1 day overdue", formula.daysUntilDue * -1 + " days overdue")))))'
   daysUntilScheduled: 'if((scheduled.isEmpty() == false), ((number(date(scheduled)) - number(today())) / 86400000).floor(), null)'
@@ -28,7 +28,7 @@ formulas:
   ageCategory: 'if(((number(now()) - number(file.ctime)) / 86400000) < 1, "Today", if(((number(now()) - number(file.ctime)) / 86400000) < 7, "This week", if(((number(now()) - number(file.ctime)) / 86400000) < 30, "This month", "Older")))'
   createdMonth: 'file.ctime.format("YYYY-MM")'
   modifiedMonth: 'file.mtime.format("YYYY-MM")'
-  priorityCategory: 'if(priority=="none","None",if(priority=="low","Low",if(priority=="normal","Normal",if(priority=="high","High","No priority"))))'
+  priorityCategory: 'if(priority=="none","None",if(priority=="6-deferred","Deferred",if(priority=="5-minor","Minor",if(priority=="4-below-average","Below Average",if(priority=="3-average","Average",if(priority=="2-above-average","Above Average",if(priority=="1-high","High",if(priority=="0-superior","Superior","No priority"))))))))'
   projectCount: 'if(!projects || list(projects).length == 0, "No projects", if(list(projects).length == 1, "Single project", "Multiple projects"))'
   contextCount: 'if(!contexts || list(contexts).length == 0, "No contexts", if(list(contexts).length == 1, "Single context", "Multiple contexts"))'
   trackingStatus: 'if(!timeEstimate || timeEstimate == 0 || timeEstimate == null, "No estimate", if(!timeEntries || list(timeEntries).length == 0, "Not started", if(formula.efficiencyRatio < 100, "Under estimate", "Over estimate")))'
@@ -50,6 +50,15 @@ views:
     filters:
       and:
         - file.hasTag("task")
+        - file.inFolder("--Attachments--") != true
+        - file.inFolder("--Obsidian Template--") != true
+        - file.inFolder("--Properties--") != true
+        - file.inFolder("--Scripts--") != true
+        - file.inFolder("Bases") != true
+        - file.inFolder("Canvas") != true
+        - file.inFolder("Dataviews") != true
+        - file.inFolder("Excalibrain") != true
+        - file.inFolder("Excalidraw") != true
         - file.hasLink(this.file) && list(note.projects).map(file(value.replace(/^\[[^\]]+\]\((.*)\)$/, "$1").replace(/%20/g, " ")).asLink()).contains(this.file.asLink())
     order:
       - status
@@ -74,6 +83,15 @@ views:
     name: "Projects"
     filters:
       and:
+        - file.inFolder("--Attachments--") != true
+        - file.inFolder("--Obsidian Template--") != true
+        - file.inFolder("--Properties--") != true
+        - file.inFolder("--Scripts--") != true
+        - file.inFolder("Bases") != true
+        - file.inFolder("Canvas") != true
+        - file.inFolder("Dataviews") != true
+        - file.inFolder("Excalibrain") != true
+        - file.inFolder("Excalidraw") != true
         - list(this.projects).map(file(value.replace(/^\[[^\]]+\]\((.*)\)$/, "$1").replace(/%20/g, " ")).asLink()).contains(file.asLink())
     order:
       - status
@@ -93,6 +111,15 @@ views:
     filters:
       and:
         - file.hasTag("task")
+        - file.inFolder("--Attachments--") != true
+        - file.inFolder("--Obsidian Template--") != true
+        - file.inFolder("--Properties--") != true
+        - file.inFolder("--Scripts--") != true
+        - file.inFolder("Bases") != true
+        - file.inFolder("Canvas") != true
+        - file.inFolder("Dataviews") != true
+        - file.inFolder("Excalibrain") != true
+        - file.inFolder("Excalidraw") != true
         - list(this.note.blockedBy).map(file(if(value.isType("object"), value.uid, value)).asLink()).contains(file.asLink())
     order:
       - status
@@ -115,6 +142,15 @@ views:
     filters:
       and:
         - file.hasTag("task")
+        - file.inFolder("--Attachments--") != true
+        - file.inFolder("--Obsidian Template--") != true
+        - file.inFolder("--Properties--") != true
+        - file.inFolder("--Scripts--") != true
+        - file.inFolder("Bases") != true
+        - file.inFolder("Canvas") != true
+        - file.inFolder("Dataviews") != true
+        - file.inFolder("Excalibrain") != true
+        - file.inFolder("Excalidraw") != true
         - list(note.blockedBy).map(file(if(value.isType("object"), value.uid, value)).asLink()).contains(this.file.asLink())
     order:
       - status
