@@ -494,7 +494,6 @@
 .ac-card-embed {
   display: flex;
   flex-direction: column;
-  contain: strict;
   overflow: hidden;
   background-color: var(--background-primary);
   border: 1px solid rgb(var(--canvas-color));

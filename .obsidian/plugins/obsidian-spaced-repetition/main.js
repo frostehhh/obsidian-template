@@ -5080,7 +5080,10 @@ var en = {
   MIGRATE_SCHEDULING_COMMENTS_TO_CALLOUT: "Migrate scheduling comments to sr metadata callout",
   DEFAULT_LOCALE_NAME: "- Obsidian's Default -",
   LANGUAGE_SETTINGS: "Language Settings",
-  LANGUAGE_SETTINGS_DESC: "Select the language you want to use for the plugin interface. This will only fully take effect after restarting Obsidian."
+  LANGUAGE_SETTINGS_DESC: "Select the language you want to use for the plugin interface. This will only fully take effect after restarting Obsidian.",
+  DEBUG_LOG: "Debug Log",
+  COPY: "Copy",
+  NO_DECKS_TO_REVIEW: "There are no decks with cards to review. Make sure you have created some flashcards by adding the tag 'flashcards' to a note and then add cards to it (see plugin page for details on that). In case you did all that and still don't see any decks here, then it will probably caused by a bug in the plugin. There is a known bug that happens when one reviews the cards very fast, then the system bugs out and the decks are not shown. Please try again to open the deck list after a few seconds."
 };
 var en_default = en;
 
@@ -9091,7 +9094,7 @@ var LocaleManager = class {
     const currentLocale = LocaleManagerInstance.getInstance().currentLocale;
     const currentLocaleMap = this.localeMap[currentLocale];
     if (!currentLocaleMap) {
-      console.error(`SRS error: Locale ${currentLocale} not found.`);
+      console.warn(`SRS error: Locale ${currentLocale} not found.`);
     }
     return currentLocaleMap;
   }
@@ -9262,8 +9265,9 @@ var DataStore = class _DataStore {
 // src/data/data-structures/deck/topic-path.ts
 var TopicPath = class _TopicPath {
   constructor(path2) {
-    if (path2 === null) throw "null path";
-    if (path2.some((str) => str.includes("/"))) throw "path entries must not contain '/'";
+    if (path2 === null) throw new Error("path is null");
+    if (path2.some((str) => str.includes("/")))
+      throw new Error("path entries must not contain '/'");
     this.path = path2;
   }
   get hasPath() {
@@ -9276,14 +9280,14 @@ var TopicPath = class _TopicPath {
     return new _TopicPath([]);
   }
   shift() {
-    if (this.isEmptyPath) throw "can't shift an empty path";
+    if (this.isEmptyPath) throw new Error("can't shift an empty path");
     return this.path.shift();
   }
   clone() {
     return new _TopicPath([...this.path]);
   }
   formatAsTag() {
-    if (this.isEmptyPath) throw "Empty path";
+    if (this.isEmptyPath) throw new Error("Empty path");
     const result = "#" + this.path.join("/");
     return result;
   }
@@ -9339,9 +9343,9 @@ var TopicPath = class _TopicPath {
     return true;
   }
   static getTopicPathFromTag(tag) {
-    if (tag === null || tag.length === 0) throw "Null/empty tag";
-    if (tag[0] !== "#") throw "Tag must start with #";
-    if (tag.length === 1) throw "Invalid tag";
+    if (tag === null || tag.length === 0) throw new Error("Null/empty tag");
+    if (tag[0] !== "#") throw new Error("Tag must start with #");
+    if (tag.length === 1) throw new Error("Invalid tag");
     const path2 = tag.replace("#", "").split("/").filter((str) => str);
     return new _TopicPath(path2);
   }
@@ -9359,7 +9363,7 @@ var TopicPath = class _TopicPath {
 };
 var TopicPathList = class _TopicPathList {
   constructor(list, lineNum = null) {
-    if (list === null) throw "TopicPathList null";
+    if (list === null) throw new Error("TopicPathList null");
     this.list = list;
     this.lineNum = lineNum;
   }
@@ -9413,7 +9417,7 @@ var TopicPathList = class _TopicPathList {
 };
 var TopicPathWithWs = class {
   constructor(topicPath, preWhitespace, postWhitespace) {
-    if (!topicPath || topicPath.isEmptyPath) throw "topicPath null";
+    if (!topicPath || topicPath.isEmptyPath) throw new Error("topicPath null");
     this.topicPath = topicPath;
     this.preWhitespace = preWhitespace;
     this.postWhitespace = postWhitespace;
@@ -10036,7 +10040,7 @@ ${scheduleHtml}`;
         settings
       );
     } else {
-      console.error(
+      console.warn(
         `updateQuestionText: Text not found: ${originalText.substring(
           0,
           100
@@ -10926,8 +10930,7 @@ var CardContainer = class {
     this.clozeInputs = null;
     this.clozeAnswers = null;
     this._keydownHandler = (e2) => {
-      if (this.plugin.dataManager === null || this.plugin.dataManager.data === null)
-        throw new Error("SR plugin or data not initialized!!!");
+      if (!this.plugin.isInitialized) throw new Error("SR plugin or data not initialized!!!");
       if (this.plugin.uiManager === null) throw new Error("UI manager not initialized!!!");
       if (this.plugin.dataManager.data.settings.useCustomHotkeys || activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT") || this.cardState === 2 /* Closed */ || !this.plugin.uiManager.getSRInFocusState() || import_obsidian11.Platform.isMobile || // No keyboard events on mobile
       EmulatedPlatform().isMobile) {
@@ -10943,7 +10946,7 @@ var CardContainer = class {
           consumeKeyEvent();
           break;
         case "KeyJ":
-          this.jumpToCardHandler();
+          void this.jumpToCardHandler();
           consumeKeyEvent();
           break;
         case "Enter":
@@ -11333,6 +11336,12 @@ var DeckListComponent = class {
     const originDeckStats = reviewSequencer.getDeckStats(
       reviewSequencer.originalDeckTree.getTopicPath()
     );
+    if (originDeckStats.totalCount === 0) {
+      const noDecksToReviewEl = this.treeContainer.createDiv();
+      noDecksToReviewEl.addClass("sr-no-decks-to-review");
+      noDecksToReviewEl.setText(t("NO_DECKS_TO_REVIEW"));
+      return;
+    }
     this._crateTreeRow(
       "All Decks",
       originDeckStats,
@@ -11467,7 +11476,7 @@ var DeckListHeaderComponent = class {
     };
     this.reviewModeDropdown.addOptions(reviewModeOptions);
     this.reviewModeDropdown.setValue("Review");
-    this.reviewModeDropdown.onChange(async (value) => {
+    this.reviewModeDropdown.onChange((value) => {
       if (value === void 0) return;
       if (value === "Review") changeReviewMode(1 /* Review */);
       if (value === "Cram") changeReviewMode(0 /* Cram */);
@@ -12023,7 +12032,7 @@ var ContentManager = class {
 
 // src/ui/obsidian-ui-components/item-views/sr-tab-view.tsx
 var SRTabView = class extends import_obsidian17.ItemView {
-  constructor(leaf, plugin, reviewQueueLoader) {
+  constructor(leaf, plugin, settings, reviewQueueLoader) {
     super(leaf);
     this.reviewQueueLoader = null;
     this.contentManager = null;
@@ -12037,7 +12046,7 @@ var SRTabView = class extends import_obsidian17.ItemView {
     }
     this.plugin = plugin;
     this.navigation = false;
-    this.settings = plugin.dataManager.data.settings;
+    this.settings = settings;
     this.reviewQueueLoader = reviewQueueLoader;
     const viewContent = this.containerEl.getElementsByClassName("view-content");
     if (viewContent.length === 0) return;
@@ -12115,6 +12124,7 @@ var SRTabView = class extends import_obsidian17.ItemView {
    * Closes the SRTabView by shutting down any active deck or flashcard views.
    * Ensures that resources associated with these views are properly released.
    */
+  // eslint-disable-next-line @typescript-eslint/require-await
   async onClose() {
     if (activeDocument.body.classList.contains("is-mobile")) {
       const mobileNavbar = activeDocument.getElementsByClassName("mobile-navbar")[0];
@@ -12144,21 +12154,24 @@ var SRTabView = class extends import_obsidian17.ItemView {
 // src/ui/obsidian-ui-components/modals/sr-modal-view.tsx
 var import_obsidian18 = require("obsidian");
 var SRModalView = class extends import_obsidian18.Modal {
-  constructor(app, plugin, settings, reviewQueueLoader) {
+  constructor(app, plugin, settingsManager, reviewQueueLoader) {
     super(app);
     this.resizeObserver = null;
     this.plugin = plugin;
+    this.settingsManager = settingsManager;
     if (import_obsidian18.Platform.isMobile || EmulatedPlatform().isMobile) {
       this.setModalSize(
-        settings.flashcardHeightPercentageMobile,
-        settings.flashcardWidthPercentageMobile
+        this.settingsManager.settings.flashcardHeightPercentageMobile,
+        this.settingsManager.settings.flashcardWidthPercentageMobile
       );
     } else {
       this.setModalSize(
-        settings.flashcardHeightPercentage,
-        settings.flashcardWidthPercentage
+        this.settingsManager.settings.flashcardHeightPercentage,
+        this.settingsManager.settings.flashcardWidthPercentage
       );
-      this.resizeObserver = new ResizeObserver(this.onResize.bind(this));
+      this.resizeObserver = new ResizeObserver((entries) => {
+        void this.onResize(entries);
+      });
       this.resizeObserver.observe(this.modalEl);
     }
     this.modalEl.setAttribute("id", "sr-modal-view");
@@ -12168,9 +12181,11 @@ var SRModalView = class extends import_obsidian18.Modal {
       app,
       plugin,
       reviewQueueLoader,
-      settings,
+      this.settingsManager.settings,
       this.contentEl,
-      this.close.bind(this)
+      () => {
+        this.close();
+      }
     );
     this.plugin.uiManager.setContentManager(this.contentManager);
   }
@@ -12210,11 +12225,11 @@ var SRModalView = class extends import_obsidian18.Modal {
   async saveSizeToSettings(heightPercent, widthPercent, isMobile) {
     if (isNaN(heightPercent) || isNaN(widthPercent)) return;
     if (isMobile) {
-      this.plugin.dataManager.data.settings.flashcardHeightPercentageMobile = heightPercent;
-      this.plugin.dataManager.data.settings.flashcardWidthPercentageMobile = widthPercent;
+      this.settingsManager.settings.flashcardHeightPercentageMobile = heightPercent;
+      this.settingsManager.settings.flashcardWidthPercentageMobile = widthPercent;
     } else {
-      this.plugin.dataManager.data.settings.flashcardHeightPercentage = heightPercent;
-      this.plugin.dataManager.data.settings.flashcardWidthPercentage = widthPercent;
+      this.settingsManager.settings.flashcardHeightPercentage = heightPercent;
+      this.settingsManager.settings.flashcardWidthPercentage = widthPercent;
     }
     await this.plugin.dataManager.savePluginData();
   }
@@ -14276,8 +14291,9 @@ var SettingsUtil = class _SettingsUtil {
 // src/ui/obsidian-ui-components/content-container/settings-page/settings-page.tsx
 var import_obsidian19 = require("obsidian");
 var SettingsPage = class {
-  constructor(pageContainerEl, plugin, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
+  constructor(pageContainerEl, plugin, settingsManager, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
     this.plugin = plugin;
+    this.settingsManager = settingsManager;
     this.dataManager = dataManager;
     this.pageType = pageType;
     this.display = display;
@@ -14380,10 +14396,11 @@ var SettingsPage = class {
 
 // src/ui/obsidian-ui-components/content-container/settings-page/data-page.tsx
 var DataPage = class extends SettingsPage {
-  constructor(pageContainerEl, plugin, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
+  constructor(pageContainerEl, plugin, settingsManager, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
     super(
       pageContainerEl,
       plugin,
+      settingsManager,
       dataManager,
       pageType,
       applySettingsUpdate,
@@ -14396,18 +14413,18 @@ var DataPage = class extends SettingsPage {
     );
     dataStorageGroup.addSetting((setting) => {
       setting.setName(t("INLINE_SCHEDULING_COMMENTS")).setDesc(t("INLINE_SCHEDULING_COMMENTS_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.cardCommentOnSameLine).onChange(async (value) => {
-          this.dataManager.data.settings.cardCommentOnSameLine = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.cardCommentOnSameLine).onChange(async (value) => {
+          this.settingsManager.settings.cardCommentOnSameLine = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("USE_CALLOUTS_FOR_SCHEDULING_COMMENTS")).setDesc(t("USE_CALLOUTS_FOR_SCHEDULING_COMMENTS_DESC")).addToggle(
         (toggle) => toggle.setValue(
-          this.dataManager.data.settings.useCalloutsForSchedulingComments
+          this.settingsManager.settings.useCalloutsForSchedulingComments
         ).onChange(async (value) => {
-          this.dataManager.data.settings.useCalloutsForSchedulingComments = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.useCalloutsForSchedulingComments = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
@@ -14429,10 +14446,10 @@ var DataPage = class extends SettingsPage {
     new import_obsidian20.SettingGroup(this.containerEl).setHeading(t("DELETE_SCHEDULING_DATA_ALL")).addSetting((setting) => {
       setting.setName(t("DELETE_TAGS_WHEN_DELETING_SCHEDULING_DATA")).setDesc(t("DELETE_TAGS_WHEN_DELETING_SCHEDULING_DATA_DESC")).addToggle(
         (toggle) => toggle.setValue(
-          this.dataManager.data.settings.deleteTagsOnSchedulingDataDeletion
+          this.settingsManager.settings.deleteTagsOnSchedulingDataDeletion
         ).onChange(async (value) => {
-          this.dataManager.data.settings.deleteTagsOnSchedulingDataDeletion = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.deleteTagsOnSchedulingDataDeletion = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
@@ -14444,7 +14461,7 @@ var DataPage = class extends SettingsPage {
             t("CONFIRM_SCHEDULING_DATA_ALL_DELETION"),
             t("SCHEDULING_DATA_ALL_DELETION_IN_PROGRESS"),
             async () => {
-              const settings = this.dataManager.data.settings;
+              const settings = this.settingsManager.settings;
               await DataStore.instance.fileModifier.deleteAllSchedulingData(
                 settings.deleteTagsOnSchedulingDataDeletion,
                 settings.flashcardTags,
@@ -14464,8 +14481,8 @@ var DataPage = class extends SettingsPage {
             t("SCHEDULING_DATA_IN_NOTES_DELETION_IN_PROGRESS"),
             async () => {
               await DataStore.instance.fileModifier.deleteAllSchedulingDataInNotes(
-                this.dataManager.data.settings.deleteTagsOnSchedulingDataDeletion,
-                this.dataManager.data.settings.tagsToReview
+                this.settingsManager.settings.deleteTagsOnSchedulingDataDeletion,
+                this.settingsManager.settings.tagsToReview
               );
             }
           ).open();
@@ -14481,8 +14498,8 @@ var DataPage = class extends SettingsPage {
             t("SCHEDULING_DATA_IN_CARDS_DELETION_IN_PROGRESS"),
             async () => {
               await DataStore.instance.fileModifier.deleteAllSchedulingDataInCards(
-                this.dataManager.data.settings.deleteTagsOnSchedulingDataDeletion,
-                this.dataManager.data.settings.flashcardTags
+                this.settingsManager.settings.deleteTagsOnSchedulingDataDeletion,
+                this.settingsManager.settings.flashcardTags
               );
             }
           ).open();
@@ -14498,8 +14515,7 @@ var DataPage = class extends SettingsPage {
             t("CONFIRM_RESET_SETTINGS"),
             t("RESET_SETTINGS_CONFIRMATION"),
             async () => {
-              this.dataManager.data.settings = DEFAULT_SETTINGS;
-              await this.dataManager.savePluginData();
+              await this.settingsManager.saveSettings(DEFAULT_SETTINGS);
               this.display();
             }
           ).open();
@@ -14512,10 +14528,11 @@ var DataPage = class extends SettingsPage {
 // src/ui/obsidian-ui-components/content-container/settings-page/flashcards-page.tsx
 var import_obsidian21 = require("obsidian");
 var FlashcardsPage = class extends SettingsPage {
-  constructor(pageContainerEl, plugin, dataManager, pageType, didReadMultilineEndMarkerWarning, applySettingsUpdate, display, openPage, scrollListener, changeMultilineEndMarkerWarningState) {
+  constructor(pageContainerEl, plugin, settingsManager, dataManager, pageType, didReadMultilineEndMarkerWarning, applySettingsUpdate, display, openPage, scrollListener, changeMultilineEndMarkerWarningState) {
     super(
       pageContainerEl,
       plugin,
+      settingsManager,
       dataManager,
       pageType,
       applySettingsUpdate,
@@ -14525,53 +14542,51 @@ var FlashcardsPage = class extends SettingsPage {
     );
     new import_obsidian21.SettingGroup(this.containerEl).setHeading(t("GROUP_TAGS_FOLDERS")).addSetting((setting) => {
       setting.setName(t("FLASHCARD_TAGS")).setDesc(t("FLASHCARD_TAGS_DESC")).addTextArea(
-        (text) => text.setValue(this.dataManager.data.settings.flashcardTags.join(" ")).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.flashcardTags.join(" ")).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.flashcardTags = value.split(/\s+/);
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.flashcardTags = value.split(/\s+/);
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("CONVERT_FOLDERS_TO_DECKS")).setDesc(t("CONVERT_FOLDERS_TO_DECKS_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.convertFoldersToDecks).onChange(async (value) => {
-          this.dataManager.data.settings.convertFoldersToDecks = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.convertFoldersToDecks).onChange(async (value) => {
+          this.settingsManager.settings.convertFoldersToDecks = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("BURY_SIBLINGS_TILL_NEXT_DAY")).setDesc(t("BURY_SIBLINGS_TILL_NEXT_DAY_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.burySiblingCards).onChange(async (value) => {
-          this.dataManager.data.settings.burySiblingCards = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.burySiblingCards).onChange(async (value) => {
+          this.settingsManager.settings.burySiblingCards = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("FLASHCARD_TAGS_TO_IGNORE")).setDesc(t("FLASHCARD_TAGS_TO_IGNORE_DESC")).addTextArea(
-        (text) => text.setValue(
-          this.dataManager.data.settings.flashcardTagsToIgnore.join(" ")
-        ).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.flashcardTagsToIgnore.join(" ")).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.flashcardTagsToIgnore = value.split(/\s+/).filter((v2) => v2);
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.flashcardTagsToIgnore = value.split(/\s+/).filter((v2) => v2);
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("FOLDERS_TO_IGNORE")).setDesc(t("FOLDERS_TO_IGNORE_DESC")).addTextArea(
-        (text) => text.setValue(this.dataManager.data.settings.noteFoldersToIgnore.join("\n")).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.noteFoldersToIgnore.join("\n")).onChange((value) => {
           this.applySettingsUpdate(async () => {
-            this.dataManager.data.settings.noteFoldersToIgnore = value.split(/\n+/).map((v2) => v2.trim()).filter((v2) => v2);
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.noteFoldersToIgnore = value.split(/\n+/).map((v2) => v2.trim()).filter((v2) => v2);
+            await this.settingsManager.save();
           });
         })
       );
     });
     new import_obsidian21.SettingGroup(this.containerEl).setHeading(t("GROUP_FLASHCARD_REVIEW")).addSetting((setting) => {
       setting.setName(t("BURY_SIBLINGS_TILL_NEXT_DAY")).setDesc(t("BURY_SIBLINGS_TILL_NEXT_DAY_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.burySiblingCards).onChange(async (value) => {
-          this.dataManager.data.settings.burySiblingCards = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.burySiblingCards).onChange(async (value) => {
+          this.settingsManager.settings.burySiblingCards = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
@@ -14582,14 +14597,14 @@ var FlashcardsPage = class extends SettingsPage {
           NewFirstRandom: t("REVIEW_CARD_ORDER_NEW_FIRST_RANDOM"),
           DueFirstRandom: t("REVIEW_CARD_ORDER_DUE_FIRST_RANDOM"),
           EveryCardRandomDeckAndCard: t("REVIEW_CARD_ORDER_RANDOM_DECK_AND_CARD")
-        }).setValue(this.dataManager.data.settings.flashcardCardOrder).onChange(async (value) => {
-          this.dataManager.data.settings.flashcardCardOrder = value;
-          await this.dataManager.savePluginData();
+        }).setValue(this.settingsManager.settings.flashcardCardOrder).onChange(async (value) => {
+          this.settingsManager.settings.flashcardCardOrder = value;
+          await this.settingsManager.save();
           this.display();
         })
       );
     }).addSetting((setting) => {
-      const deckOrderEnabled = this.dataManager.data.settings.flashcardCardOrder !== "EveryCardRandomDeckAndCard";
+      const deckOrderEnabled = this.settingsManager.settings.flashcardCardOrder !== "EveryCardRandomDeckAndCard";
       setting.setName(t("REVIEW_DECK_ORDER")).addDropdown(
         (dropdown) => dropdown.addOptions(
           deckOrderEnabled ? {
@@ -14607,10 +14622,10 @@ var FlashcardsPage = class extends SettingsPage {
             )
           }
         ).setValue(
-          deckOrderEnabled ? this.dataManager.data.settings.flashcardDeckOrder : "EveryCardRandomDeckAndCard"
+          deckOrderEnabled ? this.settingsManager.settings.flashcardDeckOrder : "EveryCardRandomDeckAndCard"
         ).setDisabled(!deckOrderEnabled).onChange(async (value) => {
-          this.dataManager.data.settings.flashcardDeckOrder = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.flashcardDeckOrder = value;
+          await this.settingsManager.save();
         })
       );
     });
@@ -14629,19 +14644,19 @@ var FlashcardsPage = class extends SettingsPage {
         setting.descEl.append(elements[i2]);
       }
       convertHighlightsToClozesEl.addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.convertHighlightsToClozes).onChange(async (value) => {
+        (toggle) => toggle.setValue(this.settingsManager.settings.convertHighlightsToClozes).onChange(async (value) => {
           const defaultHightlightPattern = "==[123;;]answer[;;hint]==";
           const clozePatternSet = new Set(
-            this.dataManager.data.settings.clozePatterns
+            this.settingsManager.settings.clozePatterns
           );
           if (value) {
             clozePatternSet.add(defaultHightlightPattern);
           } else {
             clozePatternSet.delete(defaultHightlightPattern);
           }
-          this.dataManager.data.settings.clozePatterns = [...clozePatternSet];
-          this.dataManager.data.settings.convertHighlightsToClozes = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.clozePatterns = [...clozePatternSet];
+          this.settingsManager.settings.convertHighlightsToClozes = value;
+          await this.settingsManager.save();
           this.display();
         })
       );
@@ -14655,19 +14670,19 @@ var FlashcardsPage = class extends SettingsPage {
         setting.descEl.append(elements[i2]);
       }
       convertBoldTextToClozesEl.addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.convertBoldTextToClozes).onChange(async (value) => {
+        (toggle) => toggle.setValue(this.settingsManager.settings.convertBoldTextToClozes).onChange(async (value) => {
           const defaultBoldPattern = "**[123;;]answer[;;hint]**";
           const clozePatternSet = new Set(
-            this.dataManager.data.settings.clozePatterns
+            this.settingsManager.settings.clozePatterns
           );
           if (value) {
             clozePatternSet.add(defaultBoldPattern);
           } else {
             clozePatternSet.delete(defaultBoldPattern);
           }
-          this.dataManager.data.settings.clozePatterns = [...clozePatternSet];
-          this.dataManager.data.settings.convertBoldTextToClozes = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.clozePatterns = [...clozePatternSet];
+          this.settingsManager.settings.convertBoldTextToClozes = value;
+          await this.settingsManager.save();
           this.display();
         })
       );
@@ -14686,19 +14701,19 @@ var FlashcardsPage = class extends SettingsPage {
         setting.descEl.append(elements[i2]);
       }
       convertCurlyBracketsToClozesEl.addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.convertCurlyBracketsToClozes).onChange(async (value) => {
+        (toggle) => toggle.setValue(this.settingsManager.settings.convertCurlyBracketsToClozes).onChange(async (value) => {
           const defaultCurlyBracketsPattern = "{{[123;;]answer[;;hint]}}";
           const clozePatternSet = new Set(
-            this.dataManager.data.settings.clozePatterns
+            this.settingsManager.settings.clozePatterns
           );
           if (value) {
             clozePatternSet.add(defaultCurlyBracketsPattern);
           } else {
             clozePatternSet.delete(defaultCurlyBracketsPattern);
           }
-          this.dataManager.data.settings.clozePatterns = [...clozePatternSet];
-          this.dataManager.data.settings.convertCurlyBracketsToClozes = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.clozePatterns = [...clozePatternSet];
+          this.settingsManager.settings.convertCurlyBracketsToClozes = value;
+          await this.settingsManager.save();
           this.display();
         })
       );
@@ -14714,7 +14729,7 @@ var FlashcardsPage = class extends SettingsPage {
       clozePatterns.addTextArea(
         (text) => text.setPlaceholder(
           "Example:\n==[123;;]answer[;;hint]==\n**[123;;]answer[;;hint]**\n{{[123;;]answer[;;hint]}}"
-        ).setValue(this.dataManager.data.settings.clozePatterns.join("\n")).onChange((value) => {
+        ).setValue(this.settingsManager.settings.clozePatterns.join("\n")).onChange((value) => {
           applySettingsUpdate(async () => {
             const defaultHightlightPattern = "==[123;;]answer[;;hint]==";
             const defaultBoldPattern = "**[123;;]answer[;;hint]**";
@@ -14723,84 +14738,82 @@ var FlashcardsPage = class extends SettingsPage {
               value.split(/\n+/).map((v2) => v2.trim()).filter((v2) => v2)
             );
             if (clozePatternSet.has(defaultHightlightPattern)) {
-              this.dataManager.data.settings.convertHighlightsToClozes = true;
+              this.settingsManager.settings.convertHighlightsToClozes = true;
             } else {
-              this.dataManager.data.settings.convertHighlightsToClozes = false;
+              this.settingsManager.settings.convertHighlightsToClozes = false;
             }
             if (clozePatternSet.has(defaultBoldPattern)) {
-              this.dataManager.data.settings.convertBoldTextToClozes = true;
+              this.settingsManager.settings.convertBoldTextToClozes = true;
             } else {
-              this.dataManager.data.settings.convertBoldTextToClozes = false;
+              this.settingsManager.settings.convertBoldTextToClozes = false;
             }
             if (clozePatternSet.has(defaultCurlyBracketsPattern)) {
-              this.dataManager.data.settings.convertCurlyBracketsToClozes = true;
+              this.settingsManager.settings.convertCurlyBracketsToClozes = true;
             } else {
-              this.dataManager.data.settings.convertCurlyBracketsToClozes = false;
+              this.settingsManager.settings.convertCurlyBracketsToClozes = false;
             }
-            this.dataManager.data.settings.clozePatterns = [...clozePatternSet];
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.clozePatterns = [...clozePatternSet];
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("INLINE_CARDS_SEPARATOR")).setDesc(t("FIX_SEPARATORS_MANUALLY_WARNING")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.singleLineCardSeparator = DEFAULT_SETTINGS.singleLineCardSeparator;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.singleLineCardSeparator = DEFAULT_SETTINGS.singleLineCardSeparator;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.singleLineCardSeparator).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.singleLineCardSeparator).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.singleLineCardSeparator = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.singleLineCardSeparator = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("INLINE_REVERSED_CARDS_SEPARATOR")).setDesc(t("FIX_SEPARATORS_MANUALLY_WARNING")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.singleLineReversedCardSeparator = DEFAULT_SETTINGS.singleLineReversedCardSeparator;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.singleLineReversedCardSeparator = DEFAULT_SETTINGS.singleLineReversedCardSeparator;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(
-          this.dataManager.data.settings.singleLineReversedCardSeparator
-        ).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.singleLineReversedCardSeparator).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.singleLineReversedCardSeparator = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.singleLineReversedCardSeparator = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("MULTILINE_CARDS_SEPARATOR")).setDesc(t("FIX_SEPARATORS_MANUALLY_WARNING")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.multilineCardSeparator = DEFAULT_SETTINGS.multilineCardSeparator;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.multilineCardSeparator = DEFAULT_SETTINGS.multilineCardSeparator;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.multilineCardSeparator).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.multilineCardSeparator).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.multilineCardSeparator = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.multilineCardSeparator = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("MULTILINE_REVERSED_CARDS_SEPARATOR")).setDesc(t("FIX_SEPARATORS_MANUALLY_WARNING")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.multilineReversedCardSeparator = DEFAULT_SETTINGS.multilineReversedCardSeparator;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.multilineReversedCardSeparator = DEFAULT_SETTINGS.multilineReversedCardSeparator;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.multilineReversedCardSeparator).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.multilineReversedCardSeparator).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.multilineReversedCardSeparator = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.multilineReversedCardSeparator = value;
+            await this.settingsManager.save();
           });
         })
       );
@@ -14809,15 +14822,15 @@ var FlashcardsPage = class extends SettingsPage {
       if (didReadMultilineEndMarkerWarning) {
         setting.addExtraButton((button) => {
           button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-            this.dataManager.data.settings.multilineCardEndMarker = DEFAULT_SETTINGS.multilineCardEndMarker;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.multilineCardEndMarker = DEFAULT_SETTINGS.multilineCardEndMarker;
+            await this.settingsManager.save();
             this.display();
           });
         }).addText(
-          (text) => text.setValue(this.dataManager.data.settings.multilineCardEndMarker).onChange((value) => {
+          (text) => text.setValue(this.settingsManager.settings.multilineCardEndMarker).onChange((value) => {
             applySettingsUpdate(async () => {
-              this.dataManager.data.settings.multilineCardEndMarker = value;
-              await this.dataManager.savePluginData();
+              this.settingsManager.settings.multilineCardEndMarker = value;
+              await this.settingsManager.save();
             });
           })
         );
@@ -14842,6 +14855,78 @@ var FlashcardsPage = class extends SettingsPage {
 
 // src/ui/obsidian-ui-components/content-container/settings-page/main-page.tsx
 var import_obsidian22 = require("obsidian");
+
+// src/data/debug-logger.ts
+var DebugLogger = class {
+  constructor() {
+    this.debugInfoLog = [];
+    this.debugErrorLog = [];
+    this.debugWarningLog = [];
+  }
+  /**
+   * Logs a message of the specified type.
+   */
+  log(message, type) {
+    switch (type) {
+      case "info":
+        this.debugInfoLog.push(message);
+        break;
+      case "error":
+        this.debugErrorLog.push(message);
+        break;
+      case "warning":
+        this.debugWarningLog.push(message);
+        break;
+    }
+  }
+  /**
+   * Clears the log of all types.
+   */
+  emptyLogs() {
+    this.debugInfoLog = [];
+    this.debugErrorLog = [];
+    this.debugWarningLog = [];
+  }
+  /**
+   * Clears the log of the specified type.
+   */
+  emptyLog(type) {
+    switch (type) {
+      case "info":
+        this.debugInfoLog = [];
+        break;
+      case "error":
+        this.debugErrorLog = [];
+        break;
+      case "warning":
+        this.debugWarningLog = [];
+        break;
+    }
+  }
+  getLog(type) {
+    switch (type) {
+      case "info":
+        return this.debugInfoLog.join("\n");
+      case "error":
+        return this.debugErrorLog.join("\n");
+      case "warning":
+        return this.debugWarningLog.join("\n");
+    }
+  }
+  getAllLogs() {
+    return this.getLog("info") + "\n" + this.getLog("error") + "\n" + this.getLog("warning");
+  }
+};
+var _DebugLoggerInstance = class _DebugLoggerInstance {
+  static getInstance() {
+    if (!_DebugLoggerInstance.instance) {
+      _DebugLoggerInstance.instance = new DebugLogger();
+    }
+    return _DebugLoggerInstance.instance;
+  }
+};
+_DebugLoggerInstance.instance = null;
+var DebugLoggerInstance = _DebugLoggerInstance;
 
 // src/parser.ts
 var import_clozecraft = __toESM(require_dist());
@@ -14982,10 +15067,11 @@ function parse(text, options) {
 
 // src/ui/obsidian-ui-components/content-container/settings-page/main-page.tsx
 var MainPage = class extends SettingsPage {
-  constructor(pageContainerEl, plugin, dataManager, pageType, display, openPage, scrollListener) {
+  constructor(pageContainerEl, plugin, settingsManager, dataManager, pageType, display, openPage, scrollListener) {
     super(
       pageContainerEl,
       plugin,
+      settingsManager,
       dataManager,
       pageType,
       () => {
@@ -15025,7 +15111,7 @@ var MainPage = class extends SettingsPage {
         LocaleManagerInstance.getInstance().getLocaleOptionsList().forEach((option) => {
           dropdown.addOption(option.language, option.languageName);
         });
-        dropdown.setValue(this.plugin.dataManager.data.settings.preferredLocale);
+        dropdown.setValue(this.settingsManager.settings.preferredLocale);
         dropdown.onChange(async (value) => {
           if (value === "-") {
             const loadedLocale = LocaleManagerInstance.getInstance().loadedLocale;
@@ -15033,7 +15119,7 @@ var MainPage = class extends SettingsPage {
           } else {
             LocaleManagerInstance.getInstance().currentLocale = value;
           }
-          this.plugin.dataManager.data.settings.preferredLocale = value;
+          this.settingsManager.settings.preferredLocale = value;
           await this.plugin.dataManager.savePluginData();
           this.display();
         });
@@ -15123,19 +15209,29 @@ var MainPage = class extends SettingsPage {
     });
     new import_obsidian22.SettingGroup(this.containerEl).setHeading(t("LOGGING")).addSetting((setting) => {
       setting.setName(t("DISPLAY_SCHEDULING_DEBUG_INFO")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showSchedulingDebugMessages).onChange(async (value) => {
-          this.dataManager.data.settings.showSchedulingDebugMessages = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showSchedulingDebugMessages).onChange(async (value) => {
+          this.settingsManager.settings.showSchedulingDebugMessages = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("DISPLAY_PARSER_DEBUG_INFO")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showParserDebugMessages).onChange(async (value) => {
-          this.dataManager.data.settings.showParserDebugMessages = value;
-          setDebugParser(this.dataManager.data.settings.showParserDebugMessages);
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showParserDebugMessages).onChange(async (value) => {
+          this.settingsManager.settings.showParserDebugMessages = value;
+          setDebugParser(this.settingsManager.settings.showParserDebugMessages);
+          await this.settingsManager.save();
         })
       );
+    }).addSetting((setting) => {
+      setting.setName(t("DEBUG_LOG")).addTextArea(
+        (text) => text.setValue(DebugLoggerInstance.getInstance().getLog("info"))
+      ).addExtraButton((button) => {
+        button.setIcon("copy").setTooltip(t("COPY")).onClick(async () => {
+          await navigator.clipboard.writeText(
+            DebugLoggerInstance.getInstance().getLog("info")
+          );
+        });
+      });
     });
   }
 };
@@ -15143,10 +15239,11 @@ var MainPage = class extends SettingsPage {
 // src/ui/obsidian-ui-components/content-container/settings-page/notes-page.tsx
 var import_obsidian23 = require("obsidian");
 var NotesPage = class extends SettingsPage {
-  constructor(pageContainerEl, plugin, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
+  constructor(pageContainerEl, plugin, settingsManager, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
     super(
       pageContainerEl,
       plugin,
+      settingsManager,
       dataManager,
       pageType,
       applySettingsUpdate,
@@ -15156,28 +15253,28 @@ var NotesPage = class extends SettingsPage {
     );
     new import_obsidian23.SettingGroup(this.containerEl).setHeading(t("GROUP_TAGS_FOLDERS")).addSetting((setting) => {
       setting.setName(t("TAGS_TO_REVIEW")).setDesc(t("TAGS_TO_REVIEW_DESC")).addTextArea(
-        (text) => text.setValue(this.dataManager.data.settings.tagsToReview.join(" ")).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.tagsToReview.join(" ")).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.tagsToReview = value.split(/\s+/);
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.tagsToReview = value.split(/\s+/);
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("NOTE_TAGS_TO_IGNORE")).setDesc(t("NOTE_TAGS_TO_IGNORE_DESC")).addTextArea(
-        (text) => text.setValue(this.dataManager.data.settings.noteTagsToIgnore.join(" ")).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.noteTagsToIgnore.join(" ")).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.noteTagsToIgnore = value.split(/\s+/).filter((v2) => v2);
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.noteTagsToIgnore = value.split(/\s+/).filter((v2) => v2);
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("FOLDERS_TO_IGNORE")).setDesc(t("FOLDERS_TO_IGNORE_DESC")).addTextArea(
-        (text) => text.setValue(this.dataManager.data.settings.noteFoldersToIgnore.join("\n")).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.noteFoldersToIgnore.join("\n")).onChange((value) => {
           this.applySettingsUpdate(async () => {
-            this.dataManager.data.settings.noteFoldersToIgnore = value.split(/\n+/).map((v2) => v2.trim()).filter((v2) => v2);
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.noteFoldersToIgnore = value.split(/\n+/).map((v2) => v2.trim()).filter((v2) => v2);
+            await this.settingsManager.save();
           });
         })
       );
@@ -15185,17 +15282,17 @@ var NotesPage = class extends SettingsPage {
     new import_obsidian23.SettingGroup(this.containerEl).setHeading(t("NOTES_REVIEW_QUEUE")).addSetting((setting) => {
       setting.setName(t("DATE_FORMAT_FOR_NOTE_REVIEW_QUEUE")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.preferredDateFormatForNoteReviewQueue = DEFAULT_SETTINGS.preferredDateFormatForNoteReviewQueue;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.preferredDateFormatForNoteReviewQueue = DEFAULT_SETTINGS.preferredDateFormatForNoteReviewQueue;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
         (text) => text.setValue(
-          this.dataManager.data.settings.preferredDateFormatForNoteReviewQueue
+          this.settingsManager.settings.preferredDateFormatForNoteReviewQueue
         ).onChange((value) => {
           this.applySettingsUpdate(async () => {
-            this.dataManager.data.settings.preferredDateFormatForNoteReviewQueue = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.preferredDateFormatForNoteReviewQueue = value;
+            await this.settingsManager.save();
           });
         })
       );
@@ -15211,35 +15308,35 @@ var NotesPage = class extends SettingsPage {
       }
     }).addSetting((setting) => {
       setting.setName(t("AUTO_NEXT_NOTE")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.autoNextNote).onChange(async (value) => {
-          this.dataManager.data.settings.autoNextNote = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.autoNextNote).onChange(async (value) => {
+          this.settingsManager.settings.autoNextNote = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("OPEN_RANDOM_NOTE")).setDesc(t("OPEN_RANDOM_NOTE_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.openRandomNote).onChange(async (value) => {
-          this.dataManager.data.settings.openRandomNote = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.openRandomNote).onChange(async (value) => {
+          this.settingsManager.settings.openRandomNote = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_PANE_ON_STARTUP")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.enableNoteReviewPaneOnStartup).onChange(async (value) => {
-          this.dataManager.data.settings.enableNoteReviewPaneOnStartup = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.enableNoteReviewPaneOnStartup).onChange(async (value) => {
+          this.settingsManager.settings.enableNoteReviewPaneOnStartup = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("MAX_N_DAYS_REVIEW_QUEUE")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.maxNDaysNotesReviewQueue = DEFAULT_SETTINGS.maxNDaysNotesReviewQueue;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.maxNDaysNotesReviewQueue = DEFAULT_SETTINGS.maxNDaysNotesReviewQueue;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
         (text) => text.setValue(
-          this.dataManager.data.settings.maxNDaysNotesReviewQueue.toString()
+          this.settingsManager.settings.maxNDaysNotesReviewQueue.toString()
         ).onChange((value) => {
           applySettingsUpdate(async () => {
             const numValue = Number.parseInt(value);
@@ -15247,12 +15344,12 @@ var NotesPage = class extends SettingsPage {
               if (numValue < 1) {
                 new import_obsidian23.Notice(t("MIN_ONE_DAY"));
                 text.setValue(
-                  this.dataManager.data.settings.maxNDaysNotesReviewQueue.toString()
+                  this.settingsManager.settings.maxNDaysNotesReviewQueue.toString()
                 );
                 return;
               }
-              this.dataManager.data.settings.maxNDaysNotesReviewQueue = numValue;
-              await this.dataManager.savePluginData();
+              this.settingsManager.settings.maxNDaysNotesReviewQueue = numValue;
+              await this.settingsManager.save();
             } else {
               new import_obsidian23.Notice(t("VALID_NUMBER_WARNING"));
             }
@@ -15267,15 +15364,16 @@ var NotesPage = class extends SettingsPage {
 var import_obsidian24 = require("obsidian");
 var SchedulingPage = class extends SettingsPage {
   async setAlgorithm(algorithm) {
-    this.dataManager.data.settings.algorithm = algorithm;
-    await this.dataManager.savePluginData();
-    this.dataManager.setupDataStoreAndAlgorithmInstances(this.dataManager.data.settings);
+    this.settingsManager.settings.algorithm = algorithm;
+    await this.settingsManager.save();
+    this.dataManager.setupDataStoreAndAlgorithmInstances(this.settingsManager.settings);
     this.display();
   }
-  constructor(pageContainerEl, plugin, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
+  constructor(pageContainerEl, plugin, settingsManager, dataManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
     super(
       pageContainerEl,
       plugin,
+      settingsManager,
       dataManager,
       pageType,
       applySettingsUpdate,
@@ -15285,44 +15383,44 @@ var SchedulingPage = class extends SettingsPage {
     );
     new import_obsidian24.SettingGroup(this.containerEl).setHeading(t("REVIEW_REMINDERS")).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDERS")).setDesc(t("REVIEW_REMINDERS_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.enableReviewReminders).onChange(async (value) => {
-          this.dataManager.data.settings.enableReviewReminders = value;
-          await this.dataManager.savePluginData();
-          this.plugin.restartReviewReminders();
+        (toggle) => toggle.setValue(this.settingsManager.settings.enableReviewReminders).onChange(async (value) => {
+          this.settingsManager.settings.enableReviewReminders = value;
+          await this.settingsManager.save();
+          this.plugin.reminderManager.restartReviewReminders();
           this.display();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDER_CHECK_ON_STARTUP")).setDesc(t("REVIEW_REMINDER_CHECK_ON_STARTUP_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.reviewReminderCheckOnStartup).setDisabled(!this.dataManager.data.settings.enableReviewReminders).onChange(async (value) => {
-          this.dataManager.data.settings.reviewReminderCheckOnStartup = value;
-          await this.dataManager.savePluginData();
-          this.plugin.restartReviewReminders();
+        (toggle) => toggle.setValue(this.settingsManager.settings.reviewReminderCheckOnStartup).setDisabled(!this.settingsManager.settings.enableReviewReminders).onChange(async (value) => {
+          this.settingsManager.settings.reviewReminderCheckOnStartup = value;
+          await this.settingsManager.save();
+          this.plugin.reminderManager.restartReviewReminders();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDER_INTERVAL")).setDesc(t("REVIEW_REMINDER_INTERVAL_DESC")).addText((text) => {
         text.setValue(
-          this.dataManager.data.settings.reviewReminderIntervalMinutes.toString()
+          this.settingsManager.settings.reviewReminderIntervalMinutes.toString()
         );
         text.inputEl.type = "number";
         text.inputEl.min = "1";
         text.inputEl.max = "1440";
         text.inputEl.step = "1";
-        text.setDisabled(!this.dataManager.data.settings.enableReviewReminders);
+        text.setDisabled(!this.settingsManager.settings.enableReviewReminders);
         const commitIntervalValue = (value) => {
           this.applySettingsUpdate(async () => {
             const parsedValue = Number.parseInt(value);
             if (Number.isNaN(parsedValue) || parsedValue < 1 || parsedValue > 1440) {
               new import_obsidian24.Notice(t("REVIEW_REMINDER_INTERVAL_MIN_WARNING"));
               text.setValue(
-                this.dataManager.data.settings.reviewReminderIntervalMinutes.toString()
+                this.settingsManager.settings.reviewReminderIntervalMinutes.toString()
               );
               return;
             }
-            this.dataManager.data.settings.reviewReminderIntervalMinutes = parsedValue;
-            await this.dataManager.savePluginData();
-            this.plugin.restartReviewReminders();
+            this.settingsManager.settings.reviewReminderIntervalMinutes = parsedValue;
+            await this.settingsManager.save();
+            this.plugin.reminderManager.restartReviewReminders();
           });
         };
         text.inputEl.addEventListener("blur", () => {
@@ -15336,39 +15434,39 @@ var SchedulingPage = class extends SettingsPage {
       });
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDER_MESSAGE")).setDesc(t("REVIEW_REMINDER_MESSAGE_DESC")).addTextArea(
-        (text) => text.setValue(this.dataManager.data.settings.reviewReminderMessage).setDisabled(!this.dataManager.data.settings.enableReviewReminders).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.reviewReminderMessage).setDisabled(!this.settingsManager.settings.enableReviewReminders).onChange((value) => {
           this.applySettingsUpdate(async () => {
-            this.dataManager.data.settings.reviewReminderMessage = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.reviewReminderMessage = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDER_AUTO_OPEN")).setDesc(t("REVIEW_REMINDER_AUTO_OPEN_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.reviewReminderAutoOpen).setDisabled(!this.dataManager.data.settings.enableReviewReminders).onChange(async (value) => {
-          this.dataManager.data.settings.reviewReminderAutoOpen = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.reviewReminderAutoOpen).setDisabled(!this.settingsManager.settings.enableReviewReminders).onChange(async (value) => {
+          this.settingsManager.settings.reviewReminderAutoOpen = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDER_SHOW_NOTICE")).setDesc(t("REVIEW_REMINDER_SHOW_NOTICE_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.reviewReminderShowNotice).setDisabled(!this.dataManager.data.settings.enableReviewReminders).onChange(async (value) => {
-          this.dataManager.data.settings.reviewReminderShowNotice = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.reviewReminderShowNotice).setDisabled(!this.settingsManager.settings.enableReviewReminders).onChange(async (value) => {
+          this.settingsManager.settings.reviewReminderShowNotice = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDER_PLAY_SOUND")).setDesc(t("REVIEW_REMINDER_PLAY_SOUND_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.reviewReminderPlaySound).setDisabled(!this.dataManager.data.settings.enableReviewReminders).onChange(async (value) => {
-          this.dataManager.data.settings.reviewReminderPlaySound = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.reviewReminderPlaySound).setDisabled(!this.settingsManager.settings.enableReviewReminders).onChange(async (value) => {
+          this.settingsManager.settings.reviewReminderPlaySound = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_REMINDER_BOUNCE_DOCK")).setDesc(t("REVIEW_REMINDER_BOUNCE_DOCK_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.reviewReminderBounceDock).setDisabled(!this.dataManager.data.settings.enableReviewReminders).onChange(async (value) => {
-          this.dataManager.data.settings.reviewReminderBounceDock = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.reviewReminderBounceDock).setDisabled(!this.settingsManager.settings.enableReviewReminders).onChange(async (value) => {
+          this.settingsManager.settings.reviewReminderBounceDock = value;
+          await this.settingsManager.save();
         })
       );
     });
@@ -15378,9 +15476,9 @@ var SchedulingPage = class extends SettingsPage {
         (dropdown) => dropdown.addOptions({
           "SM-2-OSR": t("SM2_OSR_VARIANT"),
           FSRS: "FSRS"
-        }).setValue(this.dataManager.data.settings.algorithm).onChange(async (value) => {
+        }).setValue(this.settingsManager.settings.algorithm).onChange(async (value) => {
           const selectedAlgorithm = value;
-          const currentAlgorithm = this.dataManager.data.settings.algorithm;
+          const currentAlgorithm = this.settingsManager.settings.algorithm;
           if (selectedAlgorithm === currentAlgorithm) {
             return;
           }
@@ -15413,18 +15511,16 @@ var SchedulingPage = class extends SettingsPage {
         "The selected algorithm applies to flashcards and clozes only. Whole-note review continues to use the existing OSR scheduler."
       );
     });
-    if (this.dataManager.data.settings.algorithm === "FSRS" /* FSRS */) {
+    if (this.settingsManager.settings.algorithm === "FSRS" /* FSRS */) {
       algorithmGroup.addSetting((setting) => {
         setting.setName("FSRS desired retention").setDesc("Target recall probability used by FSRS for flashcard scheduling.").addExtraButton((button) => {
           button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-            this.dataManager.data.settings.fsrsDesiredRetention = DEFAULT_SETTINGS.fsrsDesiredRetention;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.fsrsDesiredRetention = DEFAULT_SETTINGS.fsrsDesiredRetention;
+            await this.settingsManager.save();
             this.display();
           });
         }).addText(
-          (text) => text.setValue(
-            this.dataManager.data.settings.fsrsDesiredRetention.toString()
-          ).onChange((value) => {
+          (text) => text.setValue(this.settingsManager.settings.fsrsDesiredRetention.toString()).onChange((value) => {
             applySettingsUpdate(async () => {
               const numValue = Number.parseFloat(value);
               if (Number.isNaN(numValue) || numValue <= 0 || numValue > 1) {
@@ -15432,39 +15528,39 @@ var SchedulingPage = class extends SettingsPage {
                   "FSRS desired retention must be between 0 and 1."
                 );
                 text.setValue(
-                  this.dataManager.data.settings.fsrsDesiredRetention.toString()
+                  this.settingsManager.settings.fsrsDesiredRetention.toString()
                 );
                 return;
               }
-              this.dataManager.data.settings.fsrsDesiredRetention = numValue;
-              await this.dataManager.savePluginData();
+              this.settingsManager.settings.fsrsDesiredRetention = numValue;
+              await this.settingsManager.save();
             });
           })
         );
       });
     }
-    if (this.dataManager.data.settings.algorithm === "SM-2-OSR" /* SM_2_OSR */) {
+    if (this.settingsManager.settings.algorithm === "SM-2-OSR" /* SM_2_OSR */) {
       algorithmGroup.addSetting((setting) => {
         setting.setName(t("BASE_EASE")).setDesc(t("BASE_EASE_DESC")).addExtraButton((button) => {
           button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-            this.dataManager.data.settings.baseEase = DEFAULT_SETTINGS.baseEase;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.baseEase = DEFAULT_SETTINGS.baseEase;
+            await this.settingsManager.save();
             this.display();
           });
         }).addText(
-          (text) => text.setValue(this.dataManager.data.settings.baseEase.toString()).onChange((value) => {
+          (text) => text.setValue(this.settingsManager.settings.baseEase.toString()).onChange((value) => {
             applySettingsUpdate(async () => {
               const numValue = Number.parseInt(value);
               if (!isNaN(numValue)) {
                 if (numValue < 130) {
                   new import_obsidian24.Notice(t("BASE_EASE_MIN_WARNING"));
                   text.setValue(
-                    this.dataManager.data.settings.baseEase.toString()
+                    this.settingsManager.settings.baseEase.toString()
                   );
                   return;
                 }
-                this.dataManager.data.settings.baseEase = numValue;
-                await this.dataManager.savePluginData();
+                this.settingsManager.settings.baseEase = numValue;
+                await this.settingsManager.save();
               } else {
                 new import_obsidian24.Notice(t("VALID_NUMBER_WARNING"));
               }
@@ -15474,39 +15570,39 @@ var SchedulingPage = class extends SettingsPage {
       }).addSetting((setting) => {
         setting.setName(t("MAX_LINK_CONTRIB")).setDesc(t("MAX_LINK_CONTRIB_DESC")).addExtraButton((button) => {
           button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-            this.dataManager.data.settings.maxLinkFactor = DEFAULT_SETTINGS.maxLinkFactor;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.maxLinkFactor = DEFAULT_SETTINGS.maxLinkFactor;
+            await this.settingsManager.save();
             this.display();
           });
         }).addSlider(
-          (slider) => slider.setLimits(0, 100, 1).setValue(this.dataManager.data.settings.maxLinkFactor * 100).setDynamicTooltip().onChange(async (value) => {
-            this.dataManager.data.settings.maxLinkFactor = value / 100;
-            await this.dataManager.savePluginData();
+          (slider) => slider.setLimits(0, 100, 1).setValue(this.settingsManager.settings.maxLinkFactor * 100).setDynamicTooltip().onChange(async (value) => {
+            this.settingsManager.settings.maxLinkFactor = value / 100;
+            await this.settingsManager.save();
           })
         );
       }).addSetting((setting) => {
         setting.setName(t("LAPSE_INTERVAL_CHANGE")).setDesc(t("LAPSE_INTERVAL_CHANGE_DESC")).addExtraButton((button) => {
           button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-            this.dataManager.data.settings.lapsesIntervalChange = DEFAULT_SETTINGS.lapsesIntervalChange;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.lapsesIntervalChange = DEFAULT_SETTINGS.lapsesIntervalChange;
+            await this.settingsManager.save();
             this.display();
           });
         }).addSlider(
-          (slider) => slider.setLimits(1, 99, 1).setValue(this.dataManager.data.settings.lapsesIntervalChange * 100).setDynamicTooltip().onChange(async (value) => {
-            this.dataManager.data.settings.lapsesIntervalChange = value / 100;
-            await this.dataManager.savePluginData();
+          (slider) => slider.setLimits(1, 99, 1).setValue(this.settingsManager.settings.lapsesIntervalChange * 100).setDynamicTooltip().onChange(async (value) => {
+            this.settingsManager.settings.lapsesIntervalChange = value / 100;
+            await this.settingsManager.save();
           })
         );
       }).addSetting((setting) => {
         setting.setName(t("EASY_BONUS")).setDesc(t("EASY_BONUS_DESC")).addExtraButton((button) => {
           button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-            this.dataManager.data.settings.easyBonus = DEFAULT_SETTINGS.easyBonus;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.easyBonus = DEFAULT_SETTINGS.easyBonus;
+            await this.settingsManager.save();
             this.display();
           });
         }).addText(
           (text) => text.setValue(
-            (this.dataManager.data.settings.easyBonus * 100).toString()
+            (this.settingsManager.settings.easyBonus * 100).toString()
           ).onChange((value) => {
             applySettingsUpdate(async () => {
               const numValue = Number.parseInt(value) / 100;
@@ -15514,12 +15610,12 @@ var SchedulingPage = class extends SettingsPage {
                 if (numValue < 1) {
                   new import_obsidian24.Notice(t("EASY_BONUS_MIN_WARNING"));
                   text.setValue(
-                    (this.dataManager.data.settings.easyBonus * 100).toString()
+                    (this.settingsManager.settings.easyBonus * 100).toString()
                   );
                   return;
                 }
-                this.dataManager.data.settings.easyBonus = numValue;
-                await this.dataManager.savePluginData();
+                this.settingsManager.settings.easyBonus = numValue;
+                await this.settingsManager.save();
               } else {
                 new import_obsidian24.Notice(t("VALID_NUMBER_WARNING"));
               }
@@ -15528,9 +15624,9 @@ var SchedulingPage = class extends SettingsPage {
         );
       }).addSetting((setting) => {
         setting.setName(t("LOAD_BALANCE")).setDesc(t("LOAD_BALANCE_DESC")).addToggle(
-          (toggle) => toggle.setValue(this.dataManager.data.settings.loadBalance).onChange(async (value) => {
-            this.dataManager.data.settings.loadBalance = value;
-            await this.dataManager.savePluginData();
+          (toggle) => toggle.setValue(this.settingsManager.settings.loadBalance).onChange(async (value) => {
+            this.settingsManager.settings.loadBalance = value;
+            await this.settingsManager.save();
           })
         );
       });
@@ -15538,24 +15634,24 @@ var SchedulingPage = class extends SettingsPage {
     algorithmGroup.addSetting((setting) => {
       setting.setName(t("MAX_INTERVAL")).setDesc(t("MAX_INTERVAL_DESC")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.maximumInterval = DEFAULT_SETTINGS.maximumInterval;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.maximumInterval = DEFAULT_SETTINGS.maximumInterval;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.maximumInterval.toString()).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.maximumInterval.toString()).onChange((value) => {
           applySettingsUpdate(async () => {
             const numValue = Number.parseInt(value);
             if (!isNaN(numValue)) {
               if (numValue < 1) {
                 new import_obsidian24.Notice(t("MAX_INTERVAL_MIN_WARNING"));
                 text.setValue(
-                  this.dataManager.data.settings.maximumInterval.toString()
+                  this.settingsManager.settings.maximumInterval.toString()
                 );
                 return;
               }
-              this.dataManager.data.settings.maximumInterval = numValue;
-              await this.dataManager.savePluginData();
+              this.settingsManager.settings.maximumInterval = numValue;
+              await this.settingsManager.save();
             } else {
               new import_obsidian24.Notice(t("VALID_NUMBER_WARNING"));
             }
@@ -15565,20 +15661,20 @@ var SchedulingPage = class extends SettingsPage {
     }).addSetting((setting) => {
       setting.setName(t("START_OF_DAY")).setDesc(t("START_OF_DAY_DESC")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.startOfDay = DEFAULT_SETTINGS.startOfDay;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.startOfDay = DEFAULT_SETTINGS.startOfDay;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.startOfDay).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.startOfDay).onChange((value) => {
           applySettingsUpdate(async () => {
             const dayBoundary = DateUtil.strToDayBoundary(value);
             if (dayBoundary === null) {
               new import_obsidian24.Notice(t("INVALID_START_OF_DAY_WARNING"));
               return;
             } else {
-              this.dataManager.data.settings.startOfDay = value;
-              await this.dataManager.savePluginData();
+              this.settingsManager.settings.startOfDay = value;
+              await this.settingsManager.save();
               globalDateProvider.setDayBoundary(dayBoundary);
             }
           });
@@ -29418,10 +29514,11 @@ Chart.register(
   ArcElement
 );
 var StatisticsPage = class extends SettingsPage {
-  constructor(pageContainerEl, plugin, dataManager, pageType, openPage, scrollListener) {
+  constructor(pageContainerEl, plugin, settingsManager, dataManager, pageType, openPage, scrollListener) {
     super(
       pageContainerEl,
       plugin,
+      settingsManager,
       dataManager,
       pageType,
       () => {
@@ -29591,10 +29688,11 @@ var StatisticsPage = class extends SettingsPage {
 // src/ui/obsidian-ui-components/content-container/settings-page/ui-preferences-page.tsx
 var import_obsidian27 = require("obsidian");
 var UIPreferencesPage = class extends SettingsPage {
-  constructor(containerEl, plugin, dataManager, uiManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
+  constructor(containerEl, plugin, settingsManager, dataManager, uiManager, pageType, applySettingsUpdate, display, openPage, scrollListener) {
     super(
       containerEl,
       plugin,
+      settingsManager,
       dataManager,
       pageType,
       applySettingsUpdate,
@@ -29607,71 +29705,71 @@ var UIPreferencesPage = class extends SettingsPage {
       setting.setName(t("OPEN_IN_TAB")).setDesc(t("OPEN_IN_TAB_DESC")).addToggle((toggle) => {
         const isMobile = import_obsidian27.Platform.isMobile || EmulatedPlatform().isMobile;
         toggle.setValue(
-          isMobile ? this.dataManager.data.settings.openViewInNewTabMobile : this.dataManager.data.settings.openViewInNewTab
+          isMobile ? this.settingsManager.settings.openViewInNewTabMobile : this.settingsManager.settings.openViewInNewTab
         ).onChange(async (value) => {
           if (isMobile) {
-            this.dataManager.data.settings.openViewInNewTabMobile = value;
-            this.dataManager.data.settings.flashcardHeightPercentageMobile = 100;
-            this.dataManager.data.settings.flashcardWidthPercentageMobile = 100;
+            this.settingsManager.settings.openViewInNewTabMobile = value;
+            this.settingsManager.settings.flashcardHeightPercentageMobile = 100;
+            this.settingsManager.settings.flashcardWidthPercentageMobile = 100;
           } else {
-            this.dataManager.data.settings.openViewInNewTab = value;
-            this.dataManager.data.settings.flashcardHeightPercentage = 100;
-            this.dataManager.data.settings.flashcardWidthPercentage = 100;
+            this.settingsManager.settings.openViewInNewTab = value;
+            this.settingsManager.settings.flashcardHeightPercentage = 100;
+            this.settingsManager.settings.flashcardWidthPercentage = 100;
           }
           if (value) {
             this.uiManager.registerSRFocusListener();
           } else {
             this.uiManager.tabViewManager.closeAllTabViews();
-            this.dataManager.data.settings.useCustomHotkeys = false;
+            this.settingsManager.settings.useCustomHotkeys = false;
             this.uiManager.removeSRFocusListener();
           }
-          await this.dataManager.savePluginData();
+          await this.settingsManager.save();
           this.display();
         });
       });
     }).addSetting((setting) => {
       const isMobile = import_obsidian27.Platform.isMobile || EmulatedPlatform().isMobile;
       setting.setName(t("USE_CUSTOM_HOTKEYS")).setDesc(t("USE_CUSTOM_HOTKEYS_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.useCustomHotkeys).setDisabled(
-          isMobile && !this.dataManager.data.settings.openViewInNewTabMobile || !isMobile && !this.dataManager.data.settings.openViewInNewTab
+        (toggle) => toggle.setValue(this.settingsManager.settings.useCustomHotkeys).setDisabled(
+          isMobile && !this.settingsManager.settings.openViewInNewTabMobile || !isMobile && !this.settingsManager.settings.openViewInNewTab
         ).onChange(async (value) => {
-          this.dataManager.data.settings.useCustomHotkeys = value;
-          if (this.dataManager.data.settings.useCustomHotkeys) {
+          this.settingsManager.settings.useCustomHotkeys = value;
+          if (this.settingsManager.settings.useCustomHotkeys) {
             this.plugin.commandManager.addCustomHotkeys();
           } else {
             this.plugin.commandManager.removeCustomHotkeys();
           }
           this.plugin.commandManager.addCustomHotkeys();
-          await this.dataManager.savePluginData();
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("SHOW_RIBBON_ICON")).setDesc(t("SHOW_RIBBON_ICON_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showRibbonIcon).onChange(async (value) => {
-          this.dataManager.data.settings.showRibbonIcon = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showRibbonIcon).onChange(async (value) => {
+          this.settingsManager.settings.showRibbonIcon = value;
+          await this.settingsManager.save();
           this.uiManager.showRibbonIcon(value);
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("ENABLE_FILE_MENU_REVIEW_OPTIONS")).setDesc(t("ENABLE_FILE_MENU_REVIEW_OPTIONS_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showFileMenuReviewOptions).onChange(async (value) => {
-          this.dataManager.data.settings.showFileMenuReviewOptions = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showFileMenuReviewOptions).onChange(async (value) => {
+          this.settingsManager.settings.showFileMenuReviewOptions = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("ENABLE_FILE_MENU_DELETE_BUTTON")).setDesc(t("ENABLE_FILE_MENU_DELETE_BUTTON_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showDeleteButtonInFileMenu).onChange(async (value) => {
-          this.dataManager.data.settings.showDeleteButtonInFileMenu = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showDeleteButtonInFileMenu).onChange(async (value) => {
+          this.settingsManager.settings.showDeleteButtonInFileMenu = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("SHOW_DELETE_BUTTON")).setDesc(t("SHOW_DELETE_BUTTON_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showDeleteButtonInCardView).onChange(async (value) => {
-          this.dataManager.data.settings.showDeleteButtonInCardView = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showDeleteButtonInCardView).onChange(async (value) => {
+          this.settingsManager.settings.showDeleteButtonInCardView = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
@@ -29679,24 +29777,24 @@ var UIPreferencesPage = class extends SettingsPage {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
           const isMobile = import_obsidian27.Platform.isMobile || EmulatedPlatform().isMobile;
           if (isMobile) {
-            this.dataManager.data.settings.flashcardHeightPercentageMobile = DEFAULT_SETTINGS.flashcardHeightPercentageMobile;
+            this.settingsManager.settings.flashcardHeightPercentageMobile = DEFAULT_SETTINGS.flashcardHeightPercentageMobile;
           } else {
-            this.dataManager.data.settings.flashcardHeightPercentage = DEFAULT_SETTINGS.flashcardHeightPercentage;
+            this.settingsManager.settings.flashcardHeightPercentage = DEFAULT_SETTINGS.flashcardHeightPercentage;
           }
-          await this.dataManager.savePluginData();
+          await this.settingsManager.save();
           this.display();
         });
       }).addSlider((slider) => {
         const isMobile = import_obsidian27.Platform.isMobile || EmulatedPlatform().isMobile;
         slider.setLimits(10, 100, 5).setValue(
-          isMobile ? this.dataManager.data.settings.flashcardHeightPercentageMobile : this.dataManager.data.settings.flashcardHeightPercentage
+          isMobile ? this.settingsManager.settings.flashcardHeightPercentageMobile : this.settingsManager.settings.flashcardHeightPercentage
         ).setDynamicTooltip().onChange(async (value) => {
           if (isMobile) {
-            this.dataManager.data.settings.flashcardHeightPercentageMobile = value;
+            this.settingsManager.settings.flashcardHeightPercentageMobile = value;
           } else {
-            this.dataManager.data.settings.flashcardHeightPercentage = value;
+            this.settingsManager.settings.flashcardHeightPercentage = value;
           }
-          await this.dataManager.savePluginData();
+          await this.settingsManager.save();
         });
       });
     }).addSetting((setting) => {
@@ -29704,58 +29802,58 @@ var UIPreferencesPage = class extends SettingsPage {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
           const isMobile = import_obsidian27.Platform.isMobile || EmulatedPlatform().isMobile;
           if (isMobile) {
-            this.dataManager.data.settings.flashcardWidthPercentageMobile = DEFAULT_SETTINGS.flashcardWidthPercentageMobile;
+            this.settingsManager.settings.flashcardWidthPercentageMobile = DEFAULT_SETTINGS.flashcardWidthPercentageMobile;
           } else {
-            this.dataManager.data.settings.flashcardWidthPercentage = DEFAULT_SETTINGS.flashcardWidthPercentage;
+            this.settingsManager.settings.flashcardWidthPercentage = DEFAULT_SETTINGS.flashcardWidthPercentage;
           }
-          await this.dataManager.savePluginData();
+          await this.settingsManager.save();
           this.display();
         });
       }).addSlider((slider) => {
         const isMobile = import_obsidian27.Platform.isMobile || EmulatedPlatform().isMobile;
         slider.setLimits(10, 100, 5).setValue(
-          isMobile ? this.dataManager.data.settings.flashcardWidthPercentageMobile : this.dataManager.data.settings.flashcardWidthPercentage
+          isMobile ? this.settingsManager.settings.flashcardWidthPercentageMobile : this.settingsManager.settings.flashcardWidthPercentage
         ).setDynamicTooltip().onChange(async (value) => {
           if (isMobile) {
-            this.dataManager.data.settings.flashcardWidthPercentageMobile = value;
+            this.settingsManager.settings.flashcardWidthPercentageMobile = value;
           } else {
-            this.dataManager.data.settings.flashcardWidthPercentage = value;
+            this.settingsManager.settings.flashcardWidthPercentage = value;
           }
-          await this.dataManager.savePluginData();
+          await this.settingsManager.save();
         });
       });
     });
     new import_obsidian27.SettingGroup(this.containerEl).setHeading(t("STATUS_BAR_SETTINGS")).addSetting((setting) => {
       setting.setName(t("SHOW_STATUS_BAR")).setDesc(t("SHOW_STATUS_BAR_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showStatusBar).onChange(async (value) => {
-          this.dataManager.data.settings.showStatusBar = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showStatusBar).onChange(async (value) => {
+          this.settingsManager.settings.showStatusBar = value;
+          await this.settingsManager.save();
           await this.uiManager.updateStatusBar();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("SHOW_CARD_STATUS_BAR_ITEM")).setDesc(t("SHOW_CARD_STATUS_BAR_ITEM_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showCardStatusBarItem).onChange(async (value) => {
-          this.dataManager.data.settings.showCardStatusBarItem = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showCardStatusBarItem).onChange(async (value) => {
+          this.settingsManager.settings.showCardStatusBarItem = value;
+          await this.settingsManager.save();
           await this.uiManager.updateStatusBar();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("SHOW_NOTE_STATUS_BAR_ITEM")).setDesc(t("SHOW_NOTE_STATUS_BAR_ITEM_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showNoteStatusBarItem).onChange(async (value) => {
-          this.dataManager.data.settings.showNoteStatusBarItem = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showNoteStatusBarItem).onChange(async (value) => {
+          this.settingsManager.settings.showNoteStatusBarItem = value;
+          await this.settingsManager.save();
           await this.uiManager.updateStatusBar();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("SHOW_UPDATE_AVAILABLE_STATUS_BAR_ITEM")).setDesc(t("SHOW_UPDATE_AVAILABLE_STATUS_BAR_ITEM_DESC")).addToggle(
         (toggle) => toggle.setValue(
-          this.dataManager.data.settings.showUpdateAvailableStatusBarItem
+          this.settingsManager.settings.showUpdateAvailableStatusBarItem
         ).onChange(async (value) => {
-          this.dataManager.data.settings.showUpdateAvailableStatusBarItem = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.showUpdateAvailableStatusBarItem = value;
+          await this.settingsManager.save();
           await this.uiManager.updateStatusBar();
         })
       );
@@ -29763,106 +29861,106 @@ var UIPreferencesPage = class extends SettingsPage {
     new import_obsidian27.SettingGroup(this.containerEl).setHeading(t("FLASHCARDS")).addSetting((setting) => {
       setting.setName(t("INITIALLY_EXPAND_SUBDECKS_IN_TREE")).setDesc(t("INITIALLY_EXPAND_SUBDECKS_IN_TREE_DESC")).addToggle(
         (toggle) => toggle.setValue(
-          this.dataManager.data.settings.initiallyExpandAllSubdecksInTree
+          this.settingsManager.settings.initiallyExpandAllSubdecksInTree
         ).onChange(async (value) => {
-          this.dataManager.data.settings.initiallyExpandAllSubdecksInTree = value;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.initiallyExpandAllSubdecksInTree = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("SHOW_CARD_CONTEXT")).setDesc(t("SHOW_CARD_CONTEXT_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showContextInCards).onChange(async (value) => {
-          this.dataManager.data.settings.showContextInCards = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showContextInCards).onChange(async (value) => {
+          this.settingsManager.settings.showContextInCards = value;
+          await this.settingsManager.save();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("CONVERT_CLOZE_PATTERNS_TO_INPUTS")).setDesc(t("CONVERT_CLOZE_PATTERNS_TO_INPUTS_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.convertClozePatternsToInputs).onChange(async (value) => {
-          this.dataManager.data.settings.convertClozePatternsToInputs = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.convertClozePatternsToInputs).onChange(async (value) => {
+          this.settingsManager.settings.convertClozePatternsToInputs = value;
+          await this.settingsManager.save();
           this.display();
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("SHOW_INTERVAL_IN_REVIEW_BUTTONS")).setDesc(t("SHOW_INTERVAL_IN_REVIEW_BUTTONS_DESC")).addToggle(
-        (toggle) => toggle.setValue(this.dataManager.data.settings.showIntervalInReviewButtons).onChange(async (value) => {
-          this.dataManager.data.settings.showIntervalInReviewButtons = value;
-          await this.dataManager.savePluginData();
+        (toggle) => toggle.setValue(this.settingsManager.settings.showIntervalInReviewButtons).onChange(async (value) => {
+          this.settingsManager.settings.showIntervalInReviewButtons = value;
+          await this.settingsManager.save();
         })
       );
     });
     new import_obsidian27.SettingGroup(this.containerEl).setHeading(t("GROUP_FLASHCARDS_NOTES")).addSetting((setting) => {
       setting.setName(t("FLASHCARD_EASY_LABEL")).setDesc(t("FLASHCARD_EASY_DESC")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.flashcardEasyText = DEFAULT_SETTINGS.flashcardEasyText;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.flashcardEasyText = DEFAULT_SETTINGS.flashcardEasyText;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.flashcardEasyText).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.flashcardEasyText).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.flashcardEasyText = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.flashcardEasyText = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("FLASHCARD_GOOD_LABEL")).setDesc(t("FLASHCARD_GOOD_DESC")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.flashcardGoodText = DEFAULT_SETTINGS.flashcardGoodText;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.flashcardGoodText = DEFAULT_SETTINGS.flashcardGoodText;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.flashcardGoodText).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.flashcardGoodText).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.flashcardGoodText = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.flashcardGoodText = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("FLASHCARD_HARD_LABEL")).setDesc(t("FLASHCARD_HARD_DESC")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.flashcardHardText = DEFAULT_SETTINGS.flashcardHardText;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.flashcardHardText = DEFAULT_SETTINGS.flashcardHardText;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.flashcardHardText).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.flashcardHardText).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.flashcardHardText = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.flashcardHardText = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("FLASHCARD_AGAIN_LABEL")).setDesc(t("FLASHCARD_AGAIN_DESC")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.flashcardAgainText = DEFAULT_SETTINGS.flashcardAgainText;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.flashcardAgainText = DEFAULT_SETTINGS.flashcardAgainText;
+          await this.settingsManager.save();
           this.display();
         });
       }).addText(
-        (text) => text.setValue(this.dataManager.data.settings.flashcardAgainText).onChange((value) => {
+        (text) => text.setValue(this.settingsManager.settings.flashcardAgainText).onChange((value) => {
           applySettingsUpdate(async () => {
-            this.dataManager.data.settings.flashcardAgainText = value;
-            await this.dataManager.savePluginData();
+            this.settingsManager.settings.flashcardAgainText = value;
+            await this.settingsManager.save();
           });
         })
       );
     }).addSetting((setting) => {
       setting.setName(t("REVIEW_BUTTON_DELAY")).setDesc(t("REVIEW_BUTTON_DELAY_DESC")).addExtraButton((button) => {
         button.setIcon("reset").setTooltip(t("RESET_DEFAULT")).onClick(async () => {
-          this.dataManager.data.settings.reviewButtonDelay = DEFAULT_SETTINGS.reviewButtonDelay;
-          await this.dataManager.savePluginData();
+          this.settingsManager.settings.reviewButtonDelay = DEFAULT_SETTINGS.reviewButtonDelay;
+          await this.settingsManager.save();
           this.display();
         });
       }).addSlider(
-        (slider) => slider.setLimits(0, 5e3, 100).setValue(this.dataManager.data.settings.reviewButtonDelay).setDynamicTooltip().onChange(async (value) => {
-          this.dataManager.data.settings.reviewButtonDelay = value;
-          await this.dataManager.savePluginData();
+        (slider) => slider.setLimits(0, 5e3, 100).setValue(this.settingsManager.settings.reviewButtonDelay).setDynamicTooltip().onChange(async (value) => {
+          this.settingsManager.settings.reviewButtonDelay = value;
+          await this.settingsManager.save();
         })
       );
     });
@@ -29916,13 +30014,14 @@ function getPageIcon(pageType) {
   }
 }
 var SettingsPageManager = class {
-  constructor(containerEl, plugin, dataManager, uiManager, lastPage, lastScrollPosition, didReadMultilineEndMarkerWarning, updateLastPageState, display, changeMultilineEndMarkerWarningState) {
+  constructor(containerEl, plugin, uiManager, settingsManager, lastPage, lastScrollPosition, didReadMultilineEndMarkerWarning, updateLastPageState, display, changeMultilineEndMarkerWarningState) {
     this.pages = [];
     this.applyDebounceTimer = 0;
     this.containerEl = containerEl;
     this.plugin = plugin;
-    this.dataManager = dataManager;
+    this.dataManager = plugin.dataManager;
     this.uiManager = uiManager;
+    this.settingsManager = settingsManager;
     this.didReadMultilineEndMarkerWarning = didReadMultilineEndMarkerWarning;
     this.changeMultilineEndMarkerWarningState = changeMultilineEndMarkerWarningState;
     this.updateLastPageState = updateLastPageState;
@@ -29959,6 +30058,7 @@ var SettingsPageManager = class {
             new MainPage(
               newPageContainerEl,
               this.plugin,
+              this.settingsManager,
               this.dataManager,
               pageType,
               this.display,
@@ -29972,6 +30072,7 @@ var SettingsPageManager = class {
             new FlashcardsPage(
               newPageContainerEl,
               this.plugin,
+              this.settingsManager,
               this.dataManager,
               pageType,
               this.didReadMultilineEndMarkerWarning,
@@ -29988,6 +30089,7 @@ var SettingsPageManager = class {
             new NotesPage(
               newPageContainerEl,
               this.plugin,
+              this.settingsManager,
               this.dataManager,
               pageType,
               this.applySettingsUpdate.bind(this),
@@ -30002,11 +30104,16 @@ var SettingsPageManager = class {
             new SchedulingPage(
               newPageContainerEl,
               this.plugin,
+              this.settingsManager,
               this.dataManager,
               pageType,
-              this.applySettingsUpdate.bind(this),
+              (callback2) => {
+                this.applySettingsUpdate(callback2);
+              },
               this.display,
-              this.openPage.bind(this),
+              (pageType2) => {
+                this.openPage(pageType2);
+              },
               this.scrollListener.bind(this)
             )
           );
@@ -30016,6 +30123,7 @@ var SettingsPageManager = class {
             new UIPreferencesPage(
               newPageContainerEl,
               this.plugin,
+              this.settingsManager,
               this.dataManager,
               this.uiManager,
               pageType,
@@ -30031,6 +30139,7 @@ var SettingsPageManager = class {
             new DataPage(
               newPageContainerEl,
               this.plugin,
+              this.settingsManager,
               this.dataManager,
               pageType,
               this.applySettingsUpdate.bind(this),
@@ -30045,6 +30154,7 @@ var SettingsPageManager = class {
             new StatisticsPage(
               newPageContainerEl,
               this.plugin,
+              this.settingsManager,
               this.dataManager,
               pageType,
               this.openPage.bind(this),
@@ -30072,7 +30182,7 @@ var SettingsPageManager = class {
 
 // src/ui/obsidian-ui-components/settings-tab.tsx
 var SRSettingTab = class extends import_obsidian28.PluginSettingTab {
-  constructor(app, plugin, uiManager) {
+  constructor(app, plugin, uiManager, settingsManager) {
     super(app, plugin);
     this.settingsPageManager = null;
     this.lastPage = "main-page";
@@ -30080,23 +30190,17 @@ var SRSettingTab = class extends import_obsidian28.PluginSettingTab {
     this.didReadMultilineEndMarkerWarning = false;
     this.plugin = plugin;
     this.uiManager = uiManager;
+    this.settingsManager = settingsManager;
     this.icon = "SpacedRepIcon";
     this.containerEl.addClass("sr-settings-tab");
   }
   display() {
-    if (!this.plugin.isInitialized) {
-      const infoDiv = this.containerEl.createDiv();
-      infoDiv.setText(
-        "I am sry, but please come back in a few seconds. The spaced repetition plugin is still initializing..."
-      );
-      return;
-    }
     this.containerEl.empty();
     this.settingsPageManager = new SettingsPageManager(
       this.containerEl,
       this.plugin,
-      this.plugin.dataManager,
       this.uiManager,
+      this.settingsManager,
       this.lastPage,
       this.lastScrollPosition,
       this.didReadMultilineEndMarkerWarning,
@@ -30104,7 +30208,9 @@ var SRSettingTab = class extends import_obsidian28.PluginSettingTab {
         this.lastPage = lastPage;
         this.lastScrollPosition = lastScrollPosition;
       },
-      this.display.bind(this),
+      () => {
+        this.display();
+      },
       (state) => {
         this.didReadMultilineEndMarkerWarning = state;
         this.display();
@@ -30114,6 +30220,792 @@ var SRSettingTab = class extends import_obsidian28.PluginSettingTab {
   hide() {
     if (this.settingsPageManager) this.settingsPageManager.destroy();
     this.containerEl.empty();
+  }
+};
+
+// src/data/data-structures/card/card.ts
+var Card = class extends RepetitionItem {
+  constructor(init) {
+    super("Card" /* Card */, 0 /* New */, null, null);
+    // visuals
+    this.front = "";
+    this.back = "";
+    Object.assign(this, init);
+  }
+  formatSchedule() {
+    return this.scheduleInfo !== null ? this.scheduleInfo.formatScheduleAsSRHtmlComment() : "New";
+  }
+  toString() {
+    return `${this.front}::${this.back}`;
+  }
+};
+
+// src/data/data-structures/deck/deck.ts
+var Deck = class _Deck {
+  constructor(deckName, parent) {
+    this.deckName = deckName;
+    this.newRepItems = [];
+    this.dueRepItems = [];
+    this.subdecks = [];
+    this.parent = parent;
+  }
+  /**
+   * Gets the number of repetition items of the specified type in this deck and all its subdecks.
+   *
+   * @param {RepItemState} repItemListType - The repetition item list type.
+   * @param {boolean} includeSubdeckCounts - Whether to include the count of repetition items in subdecks.
+   * @returns {number} - The number of repetition items of the specified type in this deck and all its subdecks.
+   */
+  getRepItemCount(repItemListType, includeSubdeckCounts) {
+    let result = 0;
+    if (repItemListType === 0 /* NewItem */ || repItemListType === 2 /* AnyItem */)
+      result += this.newRepItems.length;
+    if (repItemListType === 1 /* DueItem */ || repItemListType === 2 /* AnyItem */)
+      result += this.dueRepItems.length;
+    if (includeSubdeckCounts) {
+      for (const deck of this.subdecks) {
+        result += deck.getRepItemCount(repItemListType, includeSubdeckCounts);
+      }
+    }
+    return result;
+  }
+  /**
+   * Gets the number of distinct repetition items of the specified type in this deck and all its subdecks.
+   *
+   * @param {RepItemState} repItemListType - The repetition item list type.
+   * @param {boolean} includeSubdeckCounts - Whether to include the count of repetition items in subdecks.
+   * @returns {number} - The number of distinct repetition items of the specified type in this deck and all its subdecks.
+   */
+  getDistinctRepItemCount(repItemListType, includeSubdeckCounts) {
+    const repItemList = this.getFlattenedRepItemArray(
+      repItemListType,
+      includeSubdeckCounts
+    );
+    const distinctCardSet = new Set(repItemList);
+    return distinctCardSet.size;
+  }
+  /**
+   * Gets an array of repetition items of the specified type in this deck and all its subdecks.
+   *
+   * @param {RepItemState} repItemListType - The repetition item list type.
+   * @param {boolean} includeSubdeckCounts - Whether to include the count of repetition items in subdecks.
+   * @returns {RepetitionItem[]} - An array of repetition items of the specified type in this deck and all its subdecks.
+   */
+  getFlattenedRepItemArray(repItemListType, includeSubdeckCounts) {
+    let result = [];
+    switch (repItemListType) {
+      case 0 /* NewItem */:
+        result = this.newRepItems;
+        break;
+      case 1 /* DueItem */:
+        result = this.dueRepItems;
+        break;
+      case 2 /* AnyItem */:
+        result = this.newRepItems.concat(this.dueRepItems);
+    }
+    if (includeSubdeckCounts) {
+      for (const subdeck of this.subdecks) {
+        result = result.concat(
+          subdeck.getFlattenedRepItemArray(repItemListType, includeSubdeckCounts)
+        );
+      }
+    }
+    return result;
+  }
+  // Returns a count of the number of this question's repetition items are present in this deck.
+  // (The returned value would be <= question.cards.length)
+  getQuestionRepItemCount(question) {
+    let result = 0;
+    result += this.getQuestionRepItemCountForRepItemListType(question, this.newRepItems);
+    result += this.getQuestionRepItemCountForRepItemListType(question, this.dueRepItems);
+    return result;
+  }
+  /**
+   * Gets the number of repetition items of the specified type in the specified question.
+   *
+   * @param {Question} question - The question.
+   * @param {RepetitionItem[]} repItems - The repetition items.
+   * @returns {number} - The number of repetition items of the specified type in the specified question.
+   */
+  getQuestionRepItemCountForRepItemListType(question, repItems) {
+    let result = 0;
+    for (let i2 = 0; i2 < repItems.length; i2++) {
+      if (repItems[i2] instanceof Card && Object.is(question, repItems[i2].question)) result++;
+    }
+    return result;
+  }
+  static get emptyDeck() {
+    return new _Deck("Root", null);
+  }
+  get isRootDeck() {
+    return this.parent === null;
+  }
+  /**
+   * Gets the deck with the specified tag.
+   *
+   * @param {string} tag - The tag.
+   * @returns {Deck | null} - The deck with the specified tag, or null if not found.
+   */
+  getDeckByTopicTag(tag) {
+    return this.getDeck(TopicPath.getTopicPathFromTag(tag));
+  }
+  /**
+   * Gets the deck with the specified topic path.
+   *
+   * @param {TopicPath} topicPath - The topic path.
+   * @returns {Deck | null} - The deck with the specified topic path, or null if not found.
+   */
+  getDeck(topicPath) {
+    return this._findDeckByTopicPath(topicPath);
+  }
+  /**
+   * Gets or creates a deck with the specified topic path.
+   *
+   * @param {TopicPath} topicPath - The topic path.
+   * @param {boolean} createAllowed - Whether to create the deck if it doesn't exist.
+   * @returns {Deck | null} - The deck with the specified topic path, or null if it doesn't exist and createAllowed is false.
+   */
+  _findDeckByTopicPath(topicPath) {
+    if (!topicPath.hasPath) {
+      return this;
+    }
+    const t3 = topicPath.clone();
+    const deckName = t3.shift();
+    for (const subdeck of this.subdecks) {
+      if (deckName === subdeck.deckName) {
+        return subdeck._findDeckByTopicPath(t3);
+      }
+    }
+    return null;
+  }
+  /**
+   * Gets or creates a deck with the specified topic path.
+   *
+   * @param {TopicPath} topicPath - The topic path.
+   * @returns {Deck} - The deck with the specified topic path
+   */
+  getOrCreateDeck(topicPath) {
+    if (!topicPath.hasPath) {
+      return this;
+    }
+    const t3 = topicPath.clone();
+    const deckName = t3.shift();
+    for (const subdeck2 of this.subdecks) {
+      if (deckName === subdeck2.deckName) {
+        return subdeck2.getOrCreateDeck(t3);
+      }
+    }
+    const subdeck = new _Deck(
+      deckName,
+      this
+      /* parent */
+    );
+    this.subdecks.push(subdeck);
+    return subdeck.getOrCreateDeck(t3);
+  }
+  /**
+   * Gets the topic path of the deck.
+   *
+   * @returns {TopicPath} - The topic path of the deck.
+   */
+  getTopicPath() {
+    const list = [];
+    let deck = this;
+    while (!deck.isRootDeck) {
+      list.push(deck.deckName);
+      if (deck.parent === null) {
+        break;
+      }
+      deck = deck.parent;
+    }
+    return new TopicPath(list.reverse());
+  }
+  /**
+   * Gets the root deck of the deck.
+   *
+   * @returns {Deck} - The root deck of the deck.
+   */
+  getRootDeck() {
+    let deck = this;
+    while (!deck.isRootDeck) {
+      if (deck.parent === null) {
+        break;
+      }
+      deck = deck.parent;
+    }
+    return deck;
+  }
+  /**
+   * Gets the RepetitionItem with the specified index.
+   *
+   * @param {number} index - The index of the RepetitionItem.
+   * @param {RepItemState} state - The state of the RepetitionItem.
+   * @returns {RepetitionItem} - The RepetitionItem with the specified index.
+   */
+  getRepItem(index, repItemListType) {
+    const repItemList = this.getRepItemListForRepItemState(repItemListType);
+    return repItemList[index];
+  }
+  /**
+   * Gets the list of RepetitionItems for the specified state.
+   *
+   * @param {RepItemState} state - The state of the RepetitionItems.
+   * @returns {RepetitionItem[]} - The list of RepetitionItems for the specified state.
+   */
+  getRepItemListForRepItemState(state) {
+    return state === 1 /* DueItem */ ? this.dueRepItems : this.newRepItems;
+  }
+  /**
+   * Appends a RepetitionItem to the deck.
+   *
+   * @param {TopicPathList} topicPathList - The topic path list.
+   * @param {RepetitionItem} repItem - The RepetitionItem to append.
+   */
+  appendRepItem(topicPathList, repItem) {
+    if (topicPathList.list.length === 0) {
+      this.appendRepItemToRootDeck(repItem);
+    } else {
+      for (const topicPath of topicPathList.list) {
+        this.appendRepItemSingleTopic(topicPath, repItem);
+      }
+    }
+  }
+  /**
+   * Appends a RepetitionItem to the root deck.
+   *
+   * This is used for cards that don't have any topics, and also for postponing cards (e.g. when skipping a card, we move it to the root deck and remove its topic paths, so that it won't be seen until the next review session when we reassign it to decks based on its question's topic paths)
+   *
+   * @param {RepetitionItem} repItem - The RepetitionItem to append.
+   */
+  appendRepItemToRootDeck(repItem) {
+    this.appendRepItemSingleTopic(TopicPath.emptyPath, repItem);
+  }
+  /**
+   * Appends a RepetitionItem to a deck with the specified topic path.
+   *
+   * @param {TopicPath} topicPath - The topic path.
+   * @param {RepetitionItem} repItem - The RepetitionItem to append.
+   */
+  appendRepItemSingleTopic(topicPath, repItem) {
+    const deck = this.getOrCreateDeck(topicPath);
+    const repItemList = deck.getRepItemListForRepItemState(
+      repItem.repItemState
+    );
+    repItemList.push(repItem);
+  }
+  // The question lists all the topics in which this card is included.
+  // The topics are relative to the base deck, and this method must be called on that deck
+  deleteQuestionFromAllDecks(question, exceptionIfMissing) {
+    for (const card of question.cards) {
+      this.deleteCardFromAllDecks(card, exceptionIfMissing);
+    }
+  }
+  deleteQuestion(question, exceptionIfMissing) {
+    for (const card of question.cards) {
+      this.deleteCardFromThisDeck(card, exceptionIfMissing);
+    }
+  }
+  // The card's question lists all the topics in which this card is included.
+  // The topics are relative to the base deck, and this method must be called on that deck
+  deleteCardFromAllDecks(card, exceptionIfMissing) {
+    for (const topicPath of card.question.topicPathList.list) {
+      const deck = this.getDeck(topicPath);
+      if (deck) {
+        deck.deleteCardFromThisDeck(card, exceptionIfMissing);
+      }
+    }
+  }
+  deleteCardFromThisDeck(card, exceptionIfMissing) {
+    const newIdx = this.newRepItems.indexOf(card);
+    if (newIdx !== -1) this.newRepItems.splice(newIdx, 1);
+    const dueIdx = this.dueRepItems.indexOf(card);
+    if (dueIdx !== -1) this.dueRepItems.splice(dueIdx, 1);
+    if (newIdx === -1 && dueIdx === -1 && exceptionIfMissing) {
+      throw new Error(
+        `deleteCardFromThisDeck: Card: ${card.front} not found in deck: ${this.deckName}`
+      );
+    }
+  }
+  /**
+   * Deletes a RepetitionItem at the specified index.
+   *
+   * @param {number} index - The index of the RepetitionItem to delete.
+   * @param {RepItemState} repItemState - The state of the RepetitionItem.
+   */
+  deleteRepItemAtIndex(index, repItemState) {
+    const repItemList = this.getRepItemListForRepItemState(repItemState);
+    repItemList.splice(index, 1);
+  }
+  /**
+   * Exports the deck and all its subdecks to an array.
+   *
+   * @returns {Deck[]} - An array containing the deck and all its subdecks.
+   */
+  toDeckArray() {
+    const result = [];
+    result.push(this);
+    for (const subdeck of this.subdecks) {
+      result.push(...subdeck.toDeckArray());
+    }
+    return result;
+  }
+  /**
+   * Sorts the subdecks list in ascending order by deck name.
+   */
+  sortSubdecksList() {
+    this.subdecks.sort((a2, b2) => {
+      if (a2.deckName < b2.deckName) {
+        return -1;
+      } else if (a2.deckName > b2.deckName) {
+        return 1;
+      }
+      return 0;
+    });
+    for (const deck of this.subdecks) {
+      deck.sortSubdecksList();
+    }
+  }
+  /**
+   * Logs the deck and its subdecks to the console.
+   *
+   * @param {string | null} desc - The description to log.
+   * @param {number} indent - The indentation level.
+   */
+  debugLogToConsole(desc = null, indent = 0) {
+    let str = desc !== null && desc !== void 0 ? `${desc}: ` : "";
+    str += this.toString(indent);
+    console.log(str);
+  }
+  /**
+   * Converts the deck and its subdecks to a string.
+   *
+   * @param {number} indent - The indentation level.
+   * @returns {string} - The string representation of the deck and its subdecks.
+   */
+  toString(indent = 0) {
+    let result = "";
+    let indentStr = " ".repeat(indent * 4);
+    result += `${indentStr}${this.deckName}\r
+`;
+    indentStr += "  ";
+    for (let i2 = 0; i2 < this.newRepItems.length; i2++) {
+      const repItem = this.newRepItems[i2];
+      result += `${indentStr}New: ${i2}: ${repItem.toString()}\r
+`;
+    }
+    for (let i2 = 0; i2 < this.dueRepItems.length; i2++) {
+      const repItem = this.dueRepItems[i2];
+      const s2 = repItem.isDue ? "Due" : "Not due";
+      result += `${indentStr}${s2}: ${i2}: ${repItem.toString()}\r
+`;
+    }
+    for (const subdeck of this.subdecks) {
+      result += subdeck.toString(indent + 1);
+    }
+    return result;
+  }
+  /**
+   * Clones the deck and its subdecks.
+   *
+   * @returns {Deck} - The cloned deck and its subdecks.
+   */
+  clone() {
+    return this.copyWithRepItemFilter(() => true);
+  }
+  /**
+   * Copies the deck and its subdecks with a filter.
+   *
+   * @param {(value: RepetitionItem) => boolean} predicate - The filter function.
+   * @param {Deck | null} parent - The parent deck.
+   * @returns {Deck} - The copied deck and its subdecks with the filter applied.
+   */
+  copyWithRepItemFilter(predicate, parent = null) {
+    const result = new _Deck(this.deckName, parent);
+    result.newRepItems = [...this.newRepItems.filter((card) => predicate(card))];
+    result.dueRepItems = [...this.dueRepItems.filter((card) => predicate(card))];
+    for (const s2 of this.subdecks) {
+      const newParent = result;
+      const newDeck = s2.copyWithRepItemFilter(predicate, newParent);
+      result.subdecks.push(newDeck);
+    }
+    return result;
+  }
+  /**
+   * Gets the opposite state of the specified state.
+   *
+   * @param {RepItemState} repItemState - The state.
+   * @returns {RepItemState} - The opposite state.
+   */
+  static otherListType(repItemState) {
+    let result;
+    if (repItemState === 0 /* NewItem */) result = 1 /* DueItem */;
+    else if (repItemState === 1 /* DueItem */) result = 0 /* NewItem */;
+    else throw new Error("Invalid repItemState");
+    return result;
+  }
+};
+var DeckTreeFilter = class {
+  /**
+   * Filters the deck tree for the remaining repetition items.
+   *
+   * @param {IQuestionPostponementList} questionPostponementList - The question postponement list.
+   * @param {Deck} deckTree - The deck tree.
+   * @param {FlashcardReviewMode} reviewMode - The review mode.
+   * @returns {Deck} - The filtered deck tree.
+   */
+  static filterForRemainingRepItems(questionPostponementList, deckTree, reviewMode) {
+    return deckTree.copyWithRepItemFilter(
+      (repItem) => (reviewMode === 0 /* Cram */ || repItem.isNew || repItem.isDue) && !questionPostponementList.includes(repItem.question)
+    );
+  }
+};
+
+// src/utils/numbers.ts
+var ValueCountDict = class {
+  constructor() {
+    this.dict = {};
+  }
+  // Record<value, count>
+  clearCountIfMissing(value) {
+    if (!this.hasValue(value)) this.dict[value] = 0;
+  }
+  hasValue(value) {
+    return this.dict[value] !== void 0 && this.dict[value] !== null;
+  }
+  incrementCount(value) {
+    this.clearCountIfMissing(value);
+    this.dict[value]++;
+  }
+  getMaxValue() {
+    return Math.max(...getKeysPreserveType(this.dict)) || 0;
+  }
+  getTotalOfValueMultiplyCount() {
+    const v2 = getTypedObjectEntries(this.dict).map(([value, count]) => value * count).reduce((a2, b2) => a2 + b2, 0) || 0;
+    return v2;
+  }
+};
+var RandomNumberProvider = class {
+  getInteger(lowerBound, upperBound) {
+    const range2 = upperBound - lowerBound + 1;
+    return Math.floor(Math.random() * range2) + lowerBound;
+  }
+};
+var StaticRandomNumberProvider = class {
+  getInteger(lowerBound, upperBound) {
+    if (lowerBound !== this.expectedLowerBound || upperBound !== this.expectedUpperBound)
+      return 0;
+    return this.next;
+  }
+};
+var WeightedRandomNumber = class _WeightedRandomNumber {
+  constructor(provider) {
+    this.provider = provider;
+  }
+  static create() {
+    return new _WeightedRandomNumber(globalRandomNumberProvider);
+  }
+  // weights is a dictionary:
+  //      first number - a key that can be returned
+  //      second number - the "bucket size" - this is a weight that influences the probability of the
+  //          first number being returned
+  //
+  // returns:
+  //      first number - one of the keys from the weights parameter
+  //      second number - an "index" value; 0 <= index < bucketSize
+  getRandomValues(weights) {
+    const total = _WeightedRandomNumber.calcTotalOfCount(weights);
+    if (Object.values(weights).some((i2) => !Number.isInteger(i2) || i2 < 0))
+      throw new Error("Weights must be positive integers");
+    const v2 = this.provider.getInteger(0, total - 1);
+    let x2 = 0;
+    for (const kvp in weights) {
+      const [value, count] = [Number(kvp), weights[kvp]];
+      if (v2 < x2 + count) {
+        const index = v2 - x2;
+        return [value, index];
+      }
+      x2 += count;
+    }
+    throw new Error("Should not reach here if weights are valid and provider is correct");
+  }
+  static calcTotalOfCount(weights) {
+    const total = getTypedObjectEntries(weights).map(([_2, count]) => count).reduce((a2, b2) => a2 + b2, 0) || 0;
+    return total;
+  }
+};
+var globalRandomNumberProvider = new RandomNumberProvider();
+var staticRandomNumberProvider = new StaticRandomNumberProvider();
+
+// src/data/data-structures/deck/deck-tree-iterator.ts
+var RepItemOrder = /* @__PURE__ */ ((RepItemOrder2) => {
+  RepItemOrder2[RepItemOrder2["NewFirstSequential"] = 0] = "NewFirstSequential";
+  RepItemOrder2[RepItemOrder2["NewFirstRandom"] = 1] = "NewFirstRandom";
+  RepItemOrder2[RepItemOrder2["DueFirstSequential"] = 2] = "DueFirstSequential";
+  RepItemOrder2[RepItemOrder2["DueFirstRandom"] = 3] = "DueFirstRandom";
+  RepItemOrder2[RepItemOrder2["EveryCardRandomDeckAndCard"] = 4] = "EveryCardRandomDeckAndCard";
+  return RepItemOrder2;
+})(RepItemOrder || {});
+var DeckOrder = /* @__PURE__ */ ((DeckOrder2) => {
+  DeckOrder2[DeckOrder2["PrevDeckComplete_Sequential"] = 0] = "PrevDeckComplete_Sequential";
+  DeckOrder2[DeckOrder2["PrevDeckComplete_Random"] = 1] = "PrevDeckComplete_Random";
+  return DeckOrder2;
+})(DeckOrder || {});
+var SingleDeckIterator = class _SingleDeckIterator {
+  constructor(iteratorOrder) {
+    this.deck = null;
+    this.iteratorOrder = iteratorOrder;
+    this.preferredCardListType = _SingleDeckIterator.getCardListTypeForIterator(
+      this.iteratorOrder
+    );
+    this.weightedRandomNumber = WeightedRandomNumber.create();
+  }
+  get hasCurrentCard() {
+    return this.cardIdx !== null && this.cardIdx !== void 0;
+  }
+  get currentCard() {
+    let result = null;
+    if (this.cardIdx !== null && this.cardIdx !== void 0 && this.deck !== null)
+      result = this.deck.getRepItem(this.cardIdx, this.cardListType);
+    return result;
+  }
+  setDeck(deck) {
+    this.deck = deck;
+    this.setCardListType(null);
+  }
+  //
+  // 0 <= cardIndex < newFlashcards.length + dueFlashcards.length
+  //
+  setNewOrDueCardIdx(cardIndex) {
+    let cardListType = 0 /* NewItem */;
+    let index = cardIndex;
+    if (cardIndex >= this.deck.newRepItems.length) {
+      cardListType = 1 /* DueItem */;
+      index = cardIndex - this.deck.newRepItems.length;
+    }
+    this.setCardListType(cardListType, index);
+  }
+  setCardListType(cardListType, cardIdx = null) {
+    this.cardListType = cardListType;
+    this.cardIdx = cardIdx;
+  }
+  nextCard() {
+    if (this.iteratorOrder.repItemOrder === 4 /* EveryCardRandomDeckAndCard */) {
+      this.nextRandomCard();
+    } else {
+      if (this.cardListType === null) {
+        this.setCardListType(this.preferredCardListType);
+      }
+      if (!this.nextCardWithinCurrentList()) {
+        if (this.cardListType === this.preferredCardListType) {
+          this.setCardListType(Deck.otherListType(this.cardListType));
+          if (!this.nextCardWithinCurrentList()) {
+            this.setCardListType(null);
+          }
+        } else {
+          this.cardIdx = null;
+        }
+      }
+    }
+    return this.cardIdx !== null && this.cardIdx !== void 0;
+  }
+  nextRandomCard() {
+    const newCount = this.deck.newRepItems.length;
+    const dueCount = this.deck.dueRepItems.length;
+    if (newCount + dueCount > 0) {
+      const weights = {};
+      if (newCount > 0) weights[0 /* NewItem */] = newCount;
+      if (dueCount > 0) weights[1 /* DueItem */] = dueCount;
+      const [cardListType, index] = this.weightedRandomNumber.getRandomValues(weights);
+      this.setCardListType(cardListType, index);
+    } else {
+      this.setCardListType(null);
+    }
+  }
+  nextCardWithinCurrentList() {
+    const cardList = this.deck.getRepItemListForRepItemState(this.cardListType);
+    const result = cardList.length > 0;
+    if (result) {
+      switch (this.iteratorOrder.repItemOrder) {
+        case 2 /* DueFirstSequential */:
+        case 0 /* NewFirstSequential */:
+          this.cardIdx = 0;
+          break;
+        case 3 /* DueFirstRandom */:
+        case 1 /* NewFirstRandom */:
+          this.cardIdx = globalRandomNumberProvider.getInteger(0, cardList.length - 1);
+          break;
+      }
+    }
+    return result;
+  }
+  moveCurrentCardToEndOfList() {
+    this.ensureCurrentCard();
+    const card = this.currentCard;
+    this.deck.deleteRepItemAtIndex(this.cardIdx, this.cardListType);
+    this.deck.appendRepItemToRootDeck(card);
+    this.setNoCurrentCard();
+  }
+  setNoCurrentCard() {
+    this.cardIdx = null;
+  }
+  ensureCurrentCard() {
+    if (this.cardIdx === null || this.cardListType === null) throw new Error("no current card");
+  }
+  static getCardListTypeForIterator(iteratorOrder) {
+    let result = null;
+    switch (iteratorOrder.repItemOrder) {
+      case 3 /* DueFirstRandom */:
+      case 2 /* DueFirstSequential */:
+        result = 1 /* DueItem */;
+        break;
+      case 1 /* NewFirstRandom */:
+      case 0 /* NewFirstSequential */:
+        result = 0 /* NewItem */;
+        break;
+    }
+    return result;
+  }
+};
+var DeckTreeIterator = class _DeckTreeIterator {
+  constructor(iteratorOrder, baseDeckTree) {
+    this.baseDeckTree = null;
+    this.singleDeckIterator = new SingleDeckIterator(iteratorOrder);
+    this.iteratorOrder = iteratorOrder;
+    this.weightedRandomNumber = WeightedRandomNumber.create();
+    this.setBaseDeck(baseDeckTree);
+  }
+  get hasCurrentCard() {
+    return this.deckIdx !== null && this.deckIdx !== void 0 && this.singleDeckIterator.hasCurrentCard;
+  }
+  get currentTopicPath() {
+    var _a2;
+    return (_a2 = this.currentDeck) == null ? void 0 : _a2.getTopicPath();
+  }
+  get currentDeck() {
+    if (this.deckIdx === null || this.deckIdx === void 0) return null;
+    return this.deckArray[this.deckIdx];
+  }
+  get currentRepItem() {
+    let result = null;
+    if (this.deckIdx !== null && this.deckIdx !== void 0 && this.singleDeckIterator.hasCurrentCard)
+      result = this.singleDeckIterator.currentCard;
+    return result;
+  }
+  get currentQuestion() {
+    var _a2;
+    return ((_a2 = this.currentRepItem) == null ? void 0 : _a2.question) || null;
+  }
+  setBaseDeck(baseDeck) {
+    this.baseDeckTree = baseDeck;
+    this.singleDeckIterator.setNoCurrentCard();
+  }
+  setIteratorTopicPath(topicPath) {
+    const iteratorDeck = this.baseDeckTree.getDeck(topicPath);
+    this.deckArray = _DeckTreeIterator.filterForDecksWithCards(iteratorDeck.toDeckArray());
+    this.setDeckIdx(null);
+  }
+  static filterForDecksWithCards(sourceArray) {
+    const result = [];
+    for (let idx = 0; idx < sourceArray.length; idx++) {
+      const deck = sourceArray[idx];
+      const hasAnyCards = deck.getRepItemCount(2 /* AnyItem */, false) > 0;
+      if (hasAnyCards) {
+        result.push(deck);
+      }
+    }
+    return result;
+  }
+  setDeckIdx(deckIdx) {
+    this.deckIdx = deckIdx;
+    if (deckIdx !== null && deckIdx !== void 0)
+      this.singleDeckIterator.setDeck(this.deckArray[deckIdx]);
+  }
+  nextRepItem() {
+    let result = false;
+    if (this.hasCurrentCard) {
+      this.baseDeckTree.deleteCardFromAllDecks(this.currentRepItem, true);
+    }
+    if (this.iteratorOrder.repItemOrder === 4 /* EveryCardRandomDeckAndCard */) {
+      result = this.nextCardEveryCardRandomDeck();
+    } else {
+      if (this.deckIdx === null || this.deckIdx === void 0) {
+        this.chooseNextDeck(true);
+      }
+      while (this.deckIdx < this.deckArray.length) {
+        if (this.singleDeckIterator.nextCard()) {
+          result = true;
+          break;
+        }
+        this.chooseNextDeck(false);
+      }
+    }
+    if (!result) this.deckIdx = null;
+    return result;
+  }
+  chooseNextDeck(firstTime) {
+    switch (this.iteratorOrder.deckOrder) {
+      case 0 /* PrevDeckComplete_Sequential */:
+        this.deckIdx = firstTime ? 0 : this.deckIdx + 1;
+        break;
+      case 1 /* PrevDeckComplete_Random */: {
+        const weights = {};
+        let hasDeck = false;
+        for (let i2 = 0; i2 < this.deckArray.length; i2++) {
+          if (this.deckArray[i2].getRepItemCount(2 /* AnyItem */, false)) {
+            weights[i2] = 1;
+            hasDeck = true;
+          }
+        }
+        if (hasDeck) {
+          const [deckIdx, _2] = this.weightedRandomNumber.getRandomValues(weights);
+          this.deckIdx = deckIdx;
+        } else {
+          this.deckIdx = this.deckArray.length;
+        }
+        break;
+      }
+    }
+    if (this.deckIdx < this.deckArray.length) {
+      this.singleDeckIterator.setDeck(this.deckArray[this.deckIdx]);
+    }
+  }
+  nextCardEveryCardRandomDeck() {
+    const weights = {};
+    for (let i2 = 0; i2 < this.deckArray.length; i2++) {
+      const cardCount = this.deckArray[i2].getRepItemCount(
+        2 /* AnyItem */,
+        false
+      );
+      if (cardCount) {
+        weights[i2] = cardCount;
+      }
+    }
+    if (Object.keys(weights).length === 0) return false;
+    const [deckIdx, cardIdx] = this.weightedRandomNumber.getRandomValues(weights);
+    this.setDeckIdx(deckIdx);
+    this.singleDeckIterator.setNewOrDueCardIdx(cardIdx);
+    return true;
+  }
+  deleteCurrentQuestionFromAllDecks() {
+    this.singleDeckIterator.ensureCurrentCard();
+    this.baseDeckTree.deleteQuestionFromAllDecks(this.currentQuestion, false);
+    this.singleDeckIterator.setNoCurrentCard();
+    return this.nextRepItem();
+  }
+  deleteCurrentRepItemFromAllDecks() {
+    this.singleDeckIterator.ensureCurrentCard();
+    this.baseDeckTree.deleteCardFromAllDecks(this.currentRepItem, true);
+    this.singleDeckIterator.setNoCurrentCard();
+    return this.nextRepItem();
+  }
+  moveCurrentRepItemToEndOfList() {
+    this.singleDeckIterator.moveCurrentCardToEndOfList();
+  }
+  removeCurrentDeckIfEmpty() {
+    if (this.currentDeck.getRepItemCount(2 /* AnyItem */, false) === 0) {
+      this.deckArray.splice(this.deckIdx, 1);
+      if (this.deckIdx < this.deckArray.length) this.setDeckIdx(this.deckIdx);
+    }
   }
 };
 
@@ -30136,7 +31028,7 @@ var ReviewQueueLoader = class {
     this.reviewMode = reviewMode;
   }
   async loadReviewQueue() {
-    if (this.plugin === null || this.plugin.dataManager === null || this.plugin.dataManager.osrCore === null)
+    if (this.plugin === null || this.plugin.dataManager.osrCore === null)
       throw new Error("SR plugin or OSR app core not initialized!!!");
     if (!this.plugin.dataManager.syncLock) {
       await this.plugin.dataManager.sync();
@@ -30144,7 +31036,7 @@ var ReviewQueueLoader = class {
     let deckTree;
     let remainingDeckTree;
     if (this.singleNote) {
-      const singleNoteDeckData = await this.plugin.getPreparedDecksForSingleNoteReview(
+      const singleNoteDeckData = await this.getPreparedDecksForSingleNoteReview(
         this.singleNote,
         this.reviewMode
       );
@@ -30154,12 +31046,51 @@ var ReviewQueueLoader = class {
       deckTree = this.osrCore.reviewableDeckTree;
       remainingDeckTree = this.reviewMode === 0 /* Cram */ ? this.osrCore.reviewableDeckTree : this.osrCore.remainingDeckTree;
     }
-    const reviewSequencerData = this.plugin.getPreparedReviewSequencer(
+    const reviewSequencerData = this.getPreparedReviewSequencer(
       deckTree,
       remainingDeckTree,
       this.reviewMode
     );
     return reviewSequencerData.reviewSequencer;
+  }
+  getPreparedReviewSequencer(fullDeckTree, remainingDeckTree, reviewMode) {
+    const deckIterator = this.createDeckTreeIterator(
+      this.plugin.dataManager.data.settings
+    );
+    const reviewSequencer = new FlashcardReviewSequencer(
+      reviewMode,
+      deckIterator,
+      this.plugin.dataManager.data.settings,
+      SRAlgorithm.getInstance(),
+      this.plugin.dataManager.osrCore.questionPostponementList,
+      this.plugin.dataManager.osrCore.dueDateFlashcardHistogram
+    );
+    reviewSequencer.setDeckTree(fullDeckTree, remainingDeckTree);
+    return { reviewSequencer, mode: reviewMode };
+  }
+  async getPreparedDecksForSingleNoteReview(file, mode) {
+    const note = await this.plugin.dataManager.loadNote(file);
+    const deckTree = new Deck("root", null);
+    if (note) {
+      note.appendCardsToDeck(deckTree);
+    }
+    const remainingDeckTree = DeckTreeFilter.filterForRemainingRepItems(
+      this.plugin.dataManager.osrCore.questionPostponementList,
+      deckTree,
+      mode
+    );
+    return { deckTree, remainingDeckTree, mode };
+  }
+  createDeckTreeIterator(settings) {
+    let cardOrder = RepItemOrder[settings.flashcardCardOrder];
+    if (cardOrder === void 0) cardOrder = 2 /* DueFirstSequential */;
+    let deckOrder = DeckOrder[settings.flashcardDeckOrder];
+    if (deckOrder === void 0) deckOrder = 0 /* PrevDeckComplete_Sequential */;
+    const iteratorOrder = {
+      deckOrder,
+      repItemOrder: cardOrder
+    };
+    return new DeckTreeIterator(iteratorOrder, null);
   }
 };
 
@@ -30469,9 +31400,10 @@ var ReviewQueueListView = class extends import_obsidian29.ItemView {
 
 // src/ui/sidebar-manager.tsx
 var SidebarManager = class {
-  constructor(plugin) {
+  constructor(plugin, settingsManager) {
     this.reviewQueueListView = null;
     this.plugin = plugin;
+    this.settingsManager = settingsManager;
   }
   get app() {
     return this.plugin.app;
@@ -30492,13 +31424,13 @@ var SidebarManager = class {
       return this.reviewQueueListView = new ReviewQueueListView(
         leaf,
         this.plugin.nextNoteReviewHandler,
-        this.plugin.dataManager.data.settings,
+        this.settingsManager.settings,
         this.plugin
       );
     });
   }
   async activateReviewQueueViewPanel() {
-    if (this.plugin.dataManager.data.settings.enableNoteReviewPaneOnStartup) {
+    if (this.settingsManager.settings.enableNoteReviewPaneOnStartup) {
       const activeLeaf = this.getActiveLeaf(REVIEW_QUEUE_VIEW_TYPE);
       if (!activeLeaf) return;
       await activeLeaf.setViewState({
@@ -30686,8 +31618,9 @@ var StatusBarItemTypesArray = [
   "update-available"
 ];
 var StatusBarManager = class {
-  constructor(plugin) {
+  constructor(plugin, settingsManager) {
     this.plugin = plugin;
+    this.settingsManager = settingsManager;
     this.statusBarItems = [];
   }
   setCount(count, showItems, statusBarItemType) {
@@ -30804,7 +31737,7 @@ var StatusBarManager = class {
       }
       this.statusBarItems.push(statusBarItem);
     }
-    if (this.plugin.dataManager.data.settings.showStatusBar && this.plugin.dataManager.data.settings.showUpdateAvailableStatusBarItem) {
+    if (this.settingsManager.settings.showStatusBar && this.settingsManager.settings.showUpdateAvailableStatusBarItem) {
       await this.checkAndUpdatePluginVersion();
     }
   }
@@ -30825,7 +31758,7 @@ var StatusBarManager = class {
       });
       return (await JSON.parse(response)).tag_name;
     } catch (e2) {
-      console.error(e2);
+      console.warn(e2);
       return this.plugin.manifest.version;
     }
   }
@@ -30834,17 +31767,23 @@ var StatusBarManager = class {
 // src/ui/tab-view-manager.tsx
 var TabViewManager = class {
   // Add any needed resource
-  constructor(plugin) {
+  constructor(plugin, settingsManager) {
     this.reviewQueueLoader = null;
     // Add any new other tab view types to this, then they'll be automatically registered
     this.tabViewTypes = [
       {
         type: SR_TAB_VIEW,
         viewCreator: (leaf) => {
-          return new SRTabView(leaf, this.plugin, this.reviewQueueLoader);
+          return new SRTabView(
+            leaf,
+            this.plugin,
+            this.settingsManager.settings,
+            this.reviewQueueLoader
+          );
         }
       }
     ];
+    this.settingsManager = settingsManager;
     this.plugin = plugin;
   }
   /**
@@ -30903,24 +31842,26 @@ var TabViewManager = class {
 
 // src/ui/ui-manager.tsx
 var UIManager2 = class {
-  constructor(plugin) {
+  constructor(plugin, settingsManager) {
     this.uiState = 0 /* Closed */;
     this.isSRInFocus = false;
     this.contentManager = null;
     this.ribbonIcon = null;
     this.externalModalObserver = null;
     this.plugin = plugin;
+    this.settingsManager = settingsManager;
     appIcon();
-    this.tabViewManager = new TabViewManager(this.plugin);
+    this.tabViewManager = new TabViewManager(this.plugin, this.settingsManager);
     this.tabViewManager.registerAllTabViews();
-    this.sidebarManager = new SidebarManager(this.plugin);
-    this.statusBarManager = new StatusBarManager(this.plugin);
+    this.sidebarManager = new SidebarManager(this.plugin, this.settingsManager);
+    this.statusBarManager = new StatusBarManager(this.plugin, this.settingsManager);
     this.plugin.registerEvent(
       this.plugin.app.workspace.on("file-menu", (menu, file) => {
         this.fileMenuHandler(menu, file);
       })
     );
-    this.plugin.addSettingTab(new SRSettingTab(this.plugin.app, this.plugin, this));
+    const settingsTab = new SRSettingTab(this.plugin.app, this.plugin, this, settingsManager);
+    this.plugin.addSettingTab(settingsTab);
   }
   async onLayoutReady() {
     this.tabViewManager.closeAllTabViews();
@@ -30928,18 +31869,16 @@ var UIManager2 = class {
     await this.plugin.dataManager.sync();
     await this.statusBarManager.createStatusBarItems();
     this.sidebarManager.init();
-    this.showRibbonIcon(this.plugin.dataManager.data.settings.showRibbonIcon);
+    this.showRibbonIcon(this.settingsManager.settings.showRibbonIcon);
     this.registerSRFocusListener();
   }
   destroy() {
     this.removeSRFocusListener();
   }
   async updateStatusBar() {
-    if (this.plugin.dataManager.data === null)
-      throw new Error("SR plugin or data not initialized!!!");
     if (this.plugin.dataManager.osrCore === null)
       throw new Error("SR plugin or OSR app core not initialized!!!");
-    const settings = this.plugin.dataManager.data.settings;
+    const settings = this.settingsManager.settings;
     await this.statusBarManager.showStatusBarItems(
       settings.showStatusBar,
       settings.showCardStatusBarItem,
@@ -30987,9 +31926,7 @@ var UIManager2 = class {
     );
   }
   handleExternalModalOpen(mutationList) {
-    if (this.plugin.dataManager.data === null)
-      throw new Error("SR plugin or data not initialized!!!");
-    if (this.plugin.dataManager.data.settings.openViewInNewTab && // Is a modal opening relevant for focus?
+    if (this.settingsManager.settings.openViewInNewTab && // Is a modal opening relevant for focus?
     mutationList.length > 0 && mutationList.filter(
       (mutation) => mutation.type === "childList" && (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0)
     ).length > 0) {
@@ -31069,7 +32006,7 @@ var UIManager2 = class {
    * enable only the channels that make sense for their workflow.
    */
   async notifyReviewReminder() {
-    const settings = this.plugin.dataManager.data.settings;
+    const settings = this.settingsManager.settings;
     const reminderMessage = settings.reviewReminderMessage.trim() || t("REVIEW_REMINDER_NOTICE");
     if (settings.reviewReminderShowNotice) {
       new import_obsidian32.Notice(reminderMessage, 5e3);
@@ -31161,14 +32098,12 @@ var UIManager2 = class {
   async openDeckContainer(mode, singleNote) {
     if (this.plugin.dataManager.osrCore === null)
       throw new Error("SR plugin or OSR app core not initialized!!!");
-    if (this.plugin.dataManager.data === null)
-      throw new Error("SR plugin or data not initialized!!!");
     if (this.plugin.dataManager.syncLock) {
       return;
     }
     this.focusObsidianWindow();
     await this.plugin.dataManager.sync();
-    const settings = this.plugin.dataManager.data.settings;
+    const settings = this.settingsManager.settings;
     const isMobile = import_obsidian32.Platform.isMobile || EmulatedPlatform().isMobile;
     const openInNewTab = !isMobile && settings.openViewInNewTab || isMobile && settings.openViewInNewTabMobile;
     const reviewQueueLoader = new ReviewQueueLoader(
@@ -31185,14 +32120,12 @@ var UIManager2 = class {
     this.focusObsidianWindow();
   }
   openFlashcardModal(reviewQueueLoader) {
-    if (this.plugin.dataManager.data === null)
-      throw new Error("SR plugin or data not initialized!!!");
     this.setSRViewInFocus(true);
     this.focusObsidianWindow();
     new SRModalView(
       this.plugin.app,
       this.plugin,
-      this.plugin.dataManager.data.settings,
+      this.settingsManager,
       reviewQueueLoader
     ).open();
   }
@@ -31215,10 +32148,8 @@ var UIManager2 = class {
     this.ribbonIcon.setCssProps({ display: status ? "" : "none" });
   }
   fileMenuHandler(menu, file) {
-    if (this.plugin.dataManager.data === null)
-      throw new Error("SR plugin or data not initialized!!!");
     if (!(file instanceof import_obsidian32.TFile && file.extension === "md")) return;
-    const settings = this.plugin.dataManager.data.settings;
+    const settings = this.settingsManager.settings;
     if (settings.showFileMenuReviewOptions) {
       menu.addItem((item) => {
         item.setTitle(
@@ -31226,8 +32157,6 @@ var UIManager2 = class {
             difficulty: settings.flashcardEasyText
           })
         ).setIcon("SpacedRepIcon").onClick(() => {
-          if (this.plugin.dataManager.data === null)
-            throw new Error("SR plugin or data not initialized!!!");
           void this.plugin.dataManager.saveNoteReviewResponse(
             file,
             0 /* Easy */
@@ -31240,8 +32169,6 @@ var UIManager2 = class {
             difficulty: settings.flashcardGoodText
           })
         ).setIcon("SpacedRepIcon").onClick(() => {
-          if (this.plugin.dataManager.data === null)
-            throw new Error("SR plugin or data not initialized!!!");
           void this.plugin.dataManager.saveNoteReviewResponse(
             file,
             1 /* Good */
@@ -31254,8 +32181,6 @@ var UIManager2 = class {
             difficulty: settings.flashcardHardText
           })
         ).setIcon("SpacedRepIcon").onClick(() => {
-          if (this.plugin.dataManager.data === null)
-            throw new Error("SR plugin or data not initialized!!!");
           void this.plugin.dataManager.saveNoteReviewResponse(
             file,
             2 /* Hard */
@@ -31275,9 +32200,7 @@ var UIManager2 = class {
             t("CONFIRM_NOTE_SCHEDULING_DATA_IN_NOTE_DELETION"),
             t("NOTE_SCHEDULING_DATA_IN_NOTE_DELETION_IN_PROGRESS"),
             async () => {
-              if (this.plugin.dataManager.data === null)
-                throw new Error("SR plugin or data not initialized!!!");
-              const settings2 = this.plugin.dataManager.data.settings;
+              const settings2 = this.settingsManager.settings;
               await DataStore.instance.fileModifier.deleteNoteSchedulingDataInNote(
                 file,
                 settings2.deleteTagsOnSchedulingDataDeletion,
@@ -31295,9 +32218,7 @@ var UIManager2 = class {
             t("CONFIRM_SCHEDULING_DATA_OF_CARDS_IN_NOTE_DELETION"),
             t("SCHEDULING_DATA_OF_CARDS_IN_NOTE_DELETION_IN_PROGRESS"),
             async () => {
-              if (this.plugin.dataManager.data === null)
-                throw new Error("SR plugin or data not initialized!!!");
-              const settings2 = this.plugin.dataManager.data.settings;
+              const settings2 = this.settingsManager.settings;
               await DataStore.instance.fileModifier.deleteAllSchedulingDataOfCardsInNote(
                 file,
                 settings2.deleteTagsOnSchedulingDataDeletion,
@@ -31313,14 +32234,16 @@ var UIManager2 = class {
 
 // src/command-manager.ts
 var CommandManager = class {
-  constructor(plugin) {
+  constructor(plugin, settingsManager, uiManager) {
     this.plugin = plugin;
+    this.settingsManager = settingsManager;
+    this.uiManager = uiManager;
   }
   /**
    * register all the plugin commands once the plugin is loaded
    */
   onLayoutReady() {
-    if (this.plugin.dataManager.data.settings.useCustomHotkeys) {
+    if (this.settingsManager.settings.useCustomHotkeys) {
       this.addCustomHotkeys();
     }
     this.addPluginCommands();
@@ -31350,16 +32273,14 @@ var CommandManager = class {
     this.plugin.addCommand({
       id: "srs-card-review-again",
       name: t("REVIEW_CARD_DIFFICULTY_CMD", {
-        difficulty: this.plugin.dataManager.data.settings.flashcardAgainText
+        difficulty: this.settingsManager.settings.flashcardAgainText
       }),
       repeatable: false,
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && this.plugin.uiManager.uiState === 3 /* CardBack */ && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && this.uiManager.uiState === 3 /* CardBack */ && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._processReview(
-              3 /* Again */
-            );
+            void this.uiManager.contentManager._processReview(3 /* Again */);
           }
           return true;
         }
@@ -31369,16 +32290,14 @@ var CommandManager = class {
     this.plugin.addCommand({
       id: "srs-card-review-hard",
       name: t("REVIEW_CARD_DIFFICULTY_CMD", {
-        difficulty: this.plugin.dataManager.data.settings.flashcardHardText
+        difficulty: this.settingsManager.settings.flashcardHardText
       }),
       repeatable: false,
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && this.plugin.uiManager.uiState === 3 /* CardBack */ && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && this.uiManager.uiState === 3 /* CardBack */ && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._processReview(
-              2 /* Hard */
-            );
+            void this.uiManager.contentManager._processReview(2 /* Hard */);
           }
           return true;
         }
@@ -31388,15 +32307,13 @@ var CommandManager = class {
     this.plugin.addCommand({
       id: "srs-card-review-good",
       name: t("REVIEW_CARD_DIFFICULTY_CMD", {
-        difficulty: this.plugin.dataManager.data.settings.flashcardGoodText
+        difficulty: this.settingsManager.settings.flashcardGoodText
       }),
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && this.plugin.uiManager.uiState === 3 /* CardBack */ && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && this.uiManager.uiState === 3 /* CardBack */ && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._processReview(
-              1 /* Good */
-            );
+            void this.uiManager.contentManager._processReview(1 /* Good */);
           }
           return true;
         }
@@ -31406,16 +32323,14 @@ var CommandManager = class {
     this.plugin.addCommand({
       id: "srs-card-review-easy",
       name: t("REVIEW_CARD_DIFFICULTY_CMD", {
-        difficulty: this.plugin.dataManager.data.settings.flashcardEasyText
+        difficulty: this.settingsManager.settings.flashcardEasyText
       }),
       repeatable: false,
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && this.plugin.uiManager.uiState === 3 /* CardBack */ && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && this.uiManager.uiState === 3 /* CardBack */ && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._processReview(
-              0 /* Easy */
-            );
+            void this.uiManager.contentManager._processReview(0 /* Easy */);
           }
           return true;
         }
@@ -31427,10 +32342,10 @@ var CommandManager = class {
       name: t("SHOW_ANSWER"),
       repeatable: false,
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && this.plugin.uiManager.uiState === 2 /* CardFront */ && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && this.uiManager.uiState === 2 /* CardFront */ && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._showAnswer();
+            void this.uiManager.contentManager._showAnswer();
           }
           return true;
         }
@@ -31442,10 +32357,10 @@ var CommandManager = class {
       name: t("SKIP"),
       repeatable: false,
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && (this.plugin.uiManager.uiState === 3 /* CardBack */ || this.plugin.uiManager.uiState === 2 /* CardFront */) && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && (this.uiManager.uiState === 3 /* CardBack */ || this.uiManager.uiState === 2 /* CardFront */) && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._skipCurrentCard();
+            void this.uiManager.contentManager._skipCurrentCard();
           }
           return true;
         }
@@ -31457,12 +32372,10 @@ var CommandManager = class {
       name: t("RESET_CARD_PROGRESS"),
       repeatable: false,
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && this.plugin.uiManager.uiState === 3 /* CardBack */ && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && this.uiManager.uiState === 3 /* CardBack */ && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._processReview(
-              4 /* Reset */
-            );
+            void this.uiManager.contentManager._processReview(4 /* Reset */);
           }
           return true;
         }
@@ -31474,10 +32387,10 @@ var CommandManager = class {
       name: t("OPEN_IN_BACKGROUND"),
       repeatable: false,
       checkCallback: (checking) => {
-        if (this.plugin.isInitialized && this.plugin.uiManager.uiState === 3 /* CardBack */ && this.plugin.uiManager.isSRInFocus && this.plugin.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
+        if (this.plugin.isInitialized && this.uiManager.uiState === 3 /* CardBack */ && this.uiManager.isSRInFocus && this.uiManager.contentManager !== null && !(import_obsidian33.Platform.isMobile || // No keyboard events on mobile
         EmulatedPlatform().isMobile) && !(activeDocument.activeElement !== null && (activeDocument.activeElement.nodeName === "TEXTAREA" || activeDocument.activeElement.nodeName === "INPUT"))) {
           if (!checking) {
-            void this.plugin.uiManager.contentManager._jumpToCurrentCard();
+            void this.uiManager.contentManager._jumpToCurrentCard();
           }
           return true;
         }
@@ -31502,7 +32415,7 @@ var CommandManager = class {
     this.plugin.addCommand({
       id: "srs-note-review-easy",
       name: t("REVIEW_NOTE_DIFFICULTY_CMD", {
-        difficulty: this.plugin.dataManager.data.settings.flashcardEasyText
+        difficulty: this.settingsManager.settings.flashcardEasyText
       }),
       repeatable: false,
       checkCallback: (checking) => {
@@ -31521,7 +32434,7 @@ var CommandManager = class {
     this.plugin.addCommand({
       id: "srs-note-review-good",
       name: t("REVIEW_NOTE_DIFFICULTY_CMD", {
-        difficulty: this.plugin.dataManager.data.settings.flashcardGoodText
+        difficulty: this.settingsManager.settings.flashcardGoodText
       }),
       repeatable: false,
       checkCallback: (checking) => {
@@ -31540,7 +32453,7 @@ var CommandManager = class {
     this.plugin.addCommand({
       id: "srs-note-review-hard",
       name: t("REVIEW_NOTE_DIFFICULTY_CMD", {
-        difficulty: this.plugin.dataManager.data.settings.flashcardHardText
+        difficulty: this.settingsManager.settings.flashcardHardText
       }),
       repeatable: false,
       checkCallback: (checking) => {
@@ -31561,7 +32474,7 @@ var CommandManager = class {
       name: t("REVIEW_ALL_CARDS"),
       callback: async () => {
         if (!this.plugin.isInitialized) return;
-        await this.plugin.uiManager.openDeckContainer(1 /* Review */);
+        await this.uiManager.openDeckContainer(1 /* Review */);
       }
     });
     this.plugin.addCommand({
@@ -31569,7 +32482,7 @@ var CommandManager = class {
       name: t("CRAM_ALL_CARDS"),
       callback: async () => {
         if (!this.plugin.isInitialized) return;
-        await this.plugin.uiManager.openDeckContainer(0 /* Cram */);
+        await this.uiManager.openDeckContainer(0 /* Cram */);
       }
     });
     this.plugin.addCommand({
@@ -31581,10 +32494,7 @@ var CommandManager = class {
         if (openFile === null || openFile.extension !== "md" || !this.plugin.isInitialized)
           return false;
         if (!checking) {
-          void this.plugin.uiManager.openDeckContainer(
-            1 /* Review */,
-            openFile
-          );
+          void this.uiManager.openDeckContainer(1 /* Review */, openFile);
         }
         return true;
       }
@@ -31598,10 +32508,7 @@ var CommandManager = class {
         if (openFile === null || openFile.extension !== "md" || !this.plugin.isInitialized)
           return false;
         if (!checking) {
-          void this.plugin.uiManager.openDeckContainer(
-            0 /* Cram */,
-            openFile
-          );
+          void this.uiManager.openDeckContainer(0 /* Cram */, openFile);
         }
         return true;
       }
@@ -31611,7 +32518,7 @@ var CommandManager = class {
       name: t("OPEN_REVIEW_QUEUE_VIEW"),
       callback: async () => {
         if (!this.plugin.isInitialized) return;
-        await this.plugin.uiManager.sidebarManager.openReviewQueueView();
+        await this.uiManager.sidebarManager.openReviewQueueView();
       }
     });
   }
@@ -31619,789 +32526,6 @@ var CommandManager = class {
 
 // src/data/data-manager.ts
 var import_obsidian36 = require("obsidian");
-
-// src/data/data-structures/card/card.ts
-var Card = class extends RepetitionItem {
-  constructor(init) {
-    super("Card" /* Card */, 0 /* New */, null, null);
-    // visuals
-    this.front = "";
-    this.back = "";
-    Object.assign(this, init);
-  }
-  formatSchedule() {
-    return this.scheduleInfo !== null ? this.scheduleInfo.formatScheduleAsSRHtmlComment() : "New";
-  }
-  toString() {
-    return `${this.front}::${this.back}`;
-  }
-};
-
-// src/data/data-structures/deck/deck.ts
-var Deck = class _Deck {
-  constructor(deckName, parent) {
-    this.deckName = deckName;
-    this.newRepItems = [];
-    this.dueRepItems = [];
-    this.subdecks = [];
-    this.parent = parent;
-  }
-  /**
-   * Gets the number of repetition items of the specified type in this deck and all its subdecks.
-   *
-   * @param {RepItemState} repItemListType - The repetition item list type.
-   * @param {boolean} includeSubdeckCounts - Whether to include the count of repetition items in subdecks.
-   * @returns {number} - The number of repetition items of the specified type in this deck and all its subdecks.
-   */
-  getRepItemCount(repItemListType, includeSubdeckCounts) {
-    let result = 0;
-    if (repItemListType === 0 /* NewItem */ || repItemListType === 2 /* AnyItem */)
-      result += this.newRepItems.length;
-    if (repItemListType === 1 /* DueItem */ || repItemListType === 2 /* AnyItem */)
-      result += this.dueRepItems.length;
-    if (includeSubdeckCounts) {
-      for (const deck of this.subdecks) {
-        result += deck.getRepItemCount(repItemListType, includeSubdeckCounts);
-      }
-    }
-    return result;
-  }
-  /**
-   * Gets the number of distinct repetition items of the specified type in this deck and all its subdecks.
-   *
-   * @param {RepItemState} repItemListType - The repetition item list type.
-   * @param {boolean} includeSubdeckCounts - Whether to include the count of repetition items in subdecks.
-   * @returns {number} - The number of distinct repetition items of the specified type in this deck and all its subdecks.
-   */
-  getDistinctRepItemCount(repItemListType, includeSubdeckCounts) {
-    const repItemList = this.getFlattenedRepItemArray(
-      repItemListType,
-      includeSubdeckCounts
-    );
-    const distinctCardSet = new Set(repItemList);
-    return distinctCardSet.size;
-  }
-  /**
-   * Gets an array of repetition items of the specified type in this deck and all its subdecks.
-   *
-   * @param {RepItemState} repItemListType - The repetition item list type.
-   * @param {boolean} includeSubdeckCounts - Whether to include the count of repetition items in subdecks.
-   * @returns {RepetitionItem[]} - An array of repetition items of the specified type in this deck and all its subdecks.
-   */
-  getFlattenedRepItemArray(repItemListType, includeSubdeckCounts) {
-    let result = [];
-    switch (repItemListType) {
-      case 0 /* NewItem */:
-        result = this.newRepItems;
-        break;
-      case 1 /* DueItem */:
-        result = this.dueRepItems;
-        break;
-      case 2 /* AnyItem */:
-        result = this.newRepItems.concat(this.dueRepItems);
-    }
-    if (includeSubdeckCounts) {
-      for (const subdeck of this.subdecks) {
-        result = result.concat(
-          subdeck.getFlattenedRepItemArray(repItemListType, includeSubdeckCounts)
-        );
-      }
-    }
-    return result;
-  }
-  // Returns a count of the number of this question's repetition items are present in this deck.
-  // (The returned value would be <= question.cards.length)
-  getQuestionRepItemCount(question) {
-    let result = 0;
-    result += this.getQuestionRepItemCountForRepItemListType(question, this.newRepItems);
-    result += this.getQuestionRepItemCountForRepItemListType(question, this.dueRepItems);
-    return result;
-  }
-  /**
-   * Gets the number of repetition items of the specified type in the specified question.
-   *
-   * @param {Question} question - The question.
-   * @param {RepetitionItem[]} repItems - The repetition items.
-   * @returns {number} - The number of repetition items of the specified type in the specified question.
-   */
-  getQuestionRepItemCountForRepItemListType(question, repItems) {
-    let result = 0;
-    for (let i2 = 0; i2 < repItems.length; i2++) {
-      if (repItems[i2] instanceof Card && Object.is(question, repItems[i2].question)) result++;
-    }
-    return result;
-  }
-  static get emptyDeck() {
-    return new _Deck("Root", null);
-  }
-  get isRootDeck() {
-    return this.parent === null;
-  }
-  /**
-   * Gets the deck with the specified tag.
-   *
-   * @param {string} tag - The tag.
-   * @returns {Deck | null} - The deck with the specified tag, or null if not found.
-   */
-  getDeckByTopicTag(tag) {
-    return this.getDeck(TopicPath.getTopicPathFromTag(tag));
-  }
-  /**
-   * Gets the deck with the specified topic path.
-   *
-   * @param {TopicPath} topicPath - The topic path.
-   * @returns {Deck | null} - The deck with the specified topic path, or null if not found.
-   */
-  getDeck(topicPath) {
-    return this._findDeckByTopicPath(topicPath);
-  }
-  /**
-   * Gets or creates a deck with the specified topic path.
-   *
-   * @param {TopicPath} topicPath - The topic path.
-   * @param {boolean} createAllowed - Whether to create the deck if it doesn't exist.
-   * @returns {Deck | null} - The deck with the specified topic path, or null if it doesn't exist and createAllowed is false.
-   */
-  _findDeckByTopicPath(topicPath) {
-    if (!topicPath.hasPath) {
-      return this;
-    }
-    const t3 = topicPath.clone();
-    const deckName = t3.shift();
-    for (const subdeck of this.subdecks) {
-      if (deckName === subdeck.deckName) {
-        return subdeck._findDeckByTopicPath(t3);
-      }
-    }
-    return null;
-  }
-  /**
-   * Gets or creates a deck with the specified topic path.
-   *
-   * @param {TopicPath} topicPath - The topic path.
-   * @returns {Deck} - The deck with the specified topic path
-   */
-  getOrCreateDeck(topicPath) {
-    if (!topicPath.hasPath) {
-      return this;
-    }
-    const t3 = topicPath.clone();
-    const deckName = t3.shift();
-    for (const subdeck2 of this.subdecks) {
-      if (deckName === subdeck2.deckName) {
-        return subdeck2.getOrCreateDeck(t3);
-      }
-    }
-    const subdeck = new _Deck(
-      deckName,
-      this
-      /* parent */
-    );
-    this.subdecks.push(subdeck);
-    return subdeck.getOrCreateDeck(t3);
-  }
-  /**
-   * Gets the topic path of the deck.
-   *
-   * @returns {TopicPath} - The topic path of the deck.
-   */
-  getTopicPath() {
-    const list = [];
-    let deck = this;
-    while (!deck.isRootDeck) {
-      list.push(deck.deckName);
-      if (deck.parent === null) {
-        break;
-      }
-      deck = deck.parent;
-    }
-    return new TopicPath(list.reverse());
-  }
-  /**
-   * Gets the root deck of the deck.
-   *
-   * @returns {Deck} - The root deck of the deck.
-   */
-  getRootDeck() {
-    let deck = this;
-    while (!deck.isRootDeck) {
-      if (deck.parent === null) {
-        break;
-      }
-      deck = deck.parent;
-    }
-    return deck;
-  }
-  /**
-   * Gets the RepetitionItem with the specified index.
-   *
-   * @param {number} index - The index of the RepetitionItem.
-   * @param {RepItemState} state - The state of the RepetitionItem.
-   * @returns {RepetitionItem} - The RepetitionItem with the specified index.
-   */
-  getRepItem(index, repItemListType) {
-    const repItemList = this.getRepItemListForRepItemState(repItemListType);
-    return repItemList[index];
-  }
-  /**
-   * Gets the list of RepetitionItems for the specified state.
-   *
-   * @param {RepItemState} state - The state of the RepetitionItems.
-   * @returns {RepetitionItem[]} - The list of RepetitionItems for the specified state.
-   */
-  getRepItemListForRepItemState(state) {
-    return state === 1 /* DueItem */ ? this.dueRepItems : this.newRepItems;
-  }
-  /**
-   * Appends a RepetitionItem to the deck.
-   *
-   * @param {TopicPathList} topicPathList - The topic path list.
-   * @param {RepetitionItem} repItem - The RepetitionItem to append.
-   */
-  appendRepItem(topicPathList, repItem) {
-    if (topicPathList.list.length === 0) {
-      this.appendRepItemToRootDeck(repItem);
-    } else {
-      for (const topicPath of topicPathList.list) {
-        this.appendRepItemSingleTopic(topicPath, repItem);
-      }
-    }
-  }
-  /**
-   * Appends a RepetitionItem to the root deck.
-   *
-   * This is used for cards that don't have any topics, and also for postponing cards (e.g. when skipping a card, we move it to the root deck and remove its topic paths, so that it won't be seen until the next review session when we reassign it to decks based on its question's topic paths)
-   *
-   * @param {RepetitionItem} repItem - The RepetitionItem to append.
-   */
-  appendRepItemToRootDeck(repItem) {
-    this.appendRepItemSingleTopic(TopicPath.emptyPath, repItem);
-  }
-  /**
-   * Appends a RepetitionItem to a deck with the specified topic path.
-   *
-   * @param {TopicPath} topicPath - The topic path.
-   * @param {RepetitionItem} repItem - The RepetitionItem to append.
-   */
-  appendRepItemSingleTopic(topicPath, repItem) {
-    const deck = this.getOrCreateDeck(topicPath);
-    const repItemList = deck.getRepItemListForRepItemState(
-      repItem.repItemState
-    );
-    repItemList.push(repItem);
-  }
-  // The question lists all the topics in which this card is included.
-  // The topics are relative to the base deck, and this method must be called on that deck
-  deleteQuestionFromAllDecks(question, exceptionIfMissing) {
-    for (const card of question.cards) {
-      this.deleteCardFromAllDecks(card, exceptionIfMissing);
-    }
-  }
-  deleteQuestion(question, exceptionIfMissing) {
-    for (const card of question.cards) {
-      this.deleteCardFromThisDeck(card, exceptionIfMissing);
-    }
-  }
-  // The card's question lists all the topics in which this card is included.
-  // The topics are relative to the base deck, and this method must be called on that deck
-  deleteCardFromAllDecks(card, exceptionIfMissing) {
-    for (const topicPath of card.question.topicPathList.list) {
-      const deck = this.getDeck(topicPath);
-      if (deck) {
-        deck.deleteCardFromThisDeck(card, exceptionIfMissing);
-      }
-    }
-  }
-  deleteCardFromThisDeck(card, exceptionIfMissing) {
-    const newIdx = this.newRepItems.indexOf(card);
-    if (newIdx !== -1) this.newRepItems.splice(newIdx, 1);
-    const dueIdx = this.dueRepItems.indexOf(card);
-    if (dueIdx !== -1) this.dueRepItems.splice(dueIdx, 1);
-    if (newIdx === -1 && dueIdx === -1 && exceptionIfMissing) {
-      throw `deleteCardFromThisDeck: Card: ${card.front} not found in deck: ${this.deckName}`;
-    }
-  }
-  /**
-   * Deletes a RepetitionItem at the specified index.
-   *
-   * @param {number} index - The index of the RepetitionItem to delete.
-   * @param {RepItemState} repItemState - The state of the RepetitionItem.
-   */
-  deleteRepItemAtIndex(index, repItemState) {
-    const repItemList = this.getRepItemListForRepItemState(repItemState);
-    repItemList.splice(index, 1);
-  }
-  /**
-   * Exports the deck and all its subdecks to an array.
-   *
-   * @returns {Deck[]} - An array containing the deck and all its subdecks.
-   */
-  toDeckArray() {
-    const result = [];
-    result.push(this);
-    for (const subdeck of this.subdecks) {
-      result.push(...subdeck.toDeckArray());
-    }
-    return result;
-  }
-  /**
-   * Sorts the subdecks list in ascending order by deck name.
-   */
-  sortSubdecksList() {
-    this.subdecks.sort((a2, b2) => {
-      if (a2.deckName < b2.deckName) {
-        return -1;
-      } else if (a2.deckName > b2.deckName) {
-        return 1;
-      }
-      return 0;
-    });
-    for (const deck of this.subdecks) {
-      deck.sortSubdecksList();
-    }
-  }
-  /**
-   * Logs the deck and its subdecks to the console.
-   *
-   * @param {string | null} desc - The description to log.
-   * @param {number} indent - The indentation level.
-   */
-  debugLogToConsole(desc = null, indent = 0) {
-    let str = desc !== null && desc !== void 0 ? `${desc}: ` : "";
-    str += this.toString(indent);
-    console.log(str);
-  }
-  /**
-   * Converts the deck and its subdecks to a string.
-   *
-   * @param {number} indent - The indentation level.
-   * @returns {string} - The string representation of the deck and its subdecks.
-   */
-  toString(indent = 0) {
-    let result = "";
-    let indentStr = " ".repeat(indent * 4);
-    result += `${indentStr}${this.deckName}\r
-`;
-    indentStr += "  ";
-    for (let i2 = 0; i2 < this.newRepItems.length; i2++) {
-      const repItem = this.newRepItems[i2];
-      result += `${indentStr}New: ${i2}: ${repItem.toString()}\r
-`;
-    }
-    for (let i2 = 0; i2 < this.dueRepItems.length; i2++) {
-      const repItem = this.dueRepItems[i2];
-      const s2 = repItem.isDue ? "Due" : "Not due";
-      result += `${indentStr}${s2}: ${i2}: ${repItem.toString()}\r
-`;
-    }
-    for (const subdeck of this.subdecks) {
-      result += subdeck.toString(indent + 1);
-    }
-    return result;
-  }
-  /**
-   * Clones the deck and its subdecks.
-   *
-   * @returns {Deck} - The cloned deck and its subdecks.
-   */
-  clone() {
-    return this.copyWithRepItemFilter(() => true);
-  }
-  /**
-   * Copies the deck and its subdecks with a filter.
-   *
-   * @param {(value: RepetitionItem) => boolean} predicate - The filter function.
-   * @param {Deck | null} parent - The parent deck.
-   * @returns {Deck} - The copied deck and its subdecks with the filter applied.
-   */
-  copyWithRepItemFilter(predicate, parent = null) {
-    const result = new _Deck(this.deckName, parent);
-    result.newRepItems = [...this.newRepItems.filter((card) => predicate(card))];
-    result.dueRepItems = [...this.dueRepItems.filter((card) => predicate(card))];
-    for (const s2 of this.subdecks) {
-      const newParent = result;
-      const newDeck = s2.copyWithRepItemFilter(predicate, newParent);
-      result.subdecks.push(newDeck);
-    }
-    return result;
-  }
-  /**
-   * Gets the opposite state of the specified state.
-   *
-   * @param {RepItemState} repItemState - The state.
-   * @returns {RepItemState} - The opposite state.
-   */
-  static otherListType(repItemState) {
-    let result;
-    if (repItemState === 0 /* NewItem */) result = 1 /* DueItem */;
-    else if (repItemState === 1 /* DueItem */) result = 0 /* NewItem */;
-    else throw "Invalid repItemState";
-    return result;
-  }
-};
-var DeckTreeFilter = class {
-  /**
-   * Filters the deck tree for the remaining repetition items.
-   *
-   * @param {IQuestionPostponementList} questionPostponementList - The question postponement list.
-   * @param {Deck} deckTree - The deck tree.
-   * @param {FlashcardReviewMode} reviewMode - The review mode.
-   * @returns {Deck} - The filtered deck tree.
-   */
-  static filterForRemainingRepItems(questionPostponementList, deckTree, reviewMode) {
-    return deckTree.copyWithRepItemFilter(
-      (repItem) => (reviewMode === 0 /* Cram */ || repItem.isNew || repItem.isDue) && !questionPostponementList.includes(repItem.question)
-    );
-  }
-};
-
-// src/utils/numbers.ts
-var ValueCountDict = class {
-  constructor() {
-    this.dict = {};
-  }
-  // Record<value, count>
-  clearCountIfMissing(value) {
-    if (!this.hasValue(value)) this.dict[value] = 0;
-  }
-  hasValue(value) {
-    return this.dict[value] !== void 0 && this.dict[value] !== null;
-  }
-  incrementCount(value) {
-    this.clearCountIfMissing(value);
-    this.dict[value]++;
-  }
-  getMaxValue() {
-    return Math.max(...getKeysPreserveType(this.dict)) || 0;
-  }
-  getTotalOfValueMultiplyCount() {
-    const v2 = getTypedObjectEntries(this.dict).map(([value, count]) => value * count).reduce((a2, b2) => a2 + b2, 0) || 0;
-    return v2;
-  }
-};
-var RandomNumberProvider = class {
-  getInteger(lowerBound, upperBound) {
-    const range2 = upperBound - lowerBound + 1;
-    return Math.floor(Math.random() * range2) + lowerBound;
-  }
-};
-var StaticRandomNumberProvider = class {
-  getInteger(lowerBound, upperBound) {
-    if (lowerBound !== this.expectedLowerBound || upperBound !== this.expectedUpperBound)
-      return 0;
-    return this.next;
-  }
-};
-var WeightedRandomNumber = class _WeightedRandomNumber {
-  constructor(provider) {
-    this.provider = provider;
-  }
-  static create() {
-    return new _WeightedRandomNumber(globalRandomNumberProvider);
-  }
-  // weights is a dictionary:
-  //      first number - a key that can be returned
-  //      second number - the "bucket size" - this is a weight that influences the probability of the
-  //          first number being returned
-  //
-  // returns:
-  //      first number - one of the keys from the weights parameter
-  //      second number - an "index" value; 0 <= index < bucketSize
-  getRandomValues(weights) {
-    const total = _WeightedRandomNumber.calcTotalOfCount(weights);
-    if (Object.values(weights).some((i2) => !Number.isInteger(i2) || i2 < 0))
-      throw "All weights must be positive integers";
-    const v2 = this.provider.getInteger(0, total - 1);
-    let x2 = 0;
-    for (const kvp in weights) {
-      const [value, count] = [Number(kvp), weights[kvp]];
-      if (v2 < x2 + count) {
-        const index = v2 - x2;
-        return [value, index];
-      }
-      x2 += count;
-    }
-    throw "";
-  }
-  static calcTotalOfCount(weights) {
-    const total = getTypedObjectEntries(weights).map(([_2, count]) => count).reduce((a2, b2) => a2 + b2, 0) || 0;
-    return total;
-  }
-};
-var globalRandomNumberProvider = new RandomNumberProvider();
-var staticRandomNumberProvider = new StaticRandomNumberProvider();
-
-// src/data/data-structures/deck/deck-tree-iterator.ts
-var RepItemOrder = /* @__PURE__ */ ((RepItemOrder2) => {
-  RepItemOrder2[RepItemOrder2["NewFirstSequential"] = 0] = "NewFirstSequential";
-  RepItemOrder2[RepItemOrder2["NewFirstRandom"] = 1] = "NewFirstRandom";
-  RepItemOrder2[RepItemOrder2["DueFirstSequential"] = 2] = "DueFirstSequential";
-  RepItemOrder2[RepItemOrder2["DueFirstRandom"] = 3] = "DueFirstRandom";
-  RepItemOrder2[RepItemOrder2["EveryCardRandomDeckAndCard"] = 4] = "EveryCardRandomDeckAndCard";
-  return RepItemOrder2;
-})(RepItemOrder || {});
-var DeckOrder = /* @__PURE__ */ ((DeckOrder2) => {
-  DeckOrder2[DeckOrder2["PrevDeckComplete_Sequential"] = 0] = "PrevDeckComplete_Sequential";
-  DeckOrder2[DeckOrder2["PrevDeckComplete_Random"] = 1] = "PrevDeckComplete_Random";
-  return DeckOrder2;
-})(DeckOrder || {});
-var SingleDeckIterator = class _SingleDeckIterator {
-  constructor(iteratorOrder) {
-    this.deck = null;
-    this.iteratorOrder = iteratorOrder;
-    this.preferredCardListType = _SingleDeckIterator.getCardListTypeForIterator(
-      this.iteratorOrder
-    );
-    this.weightedRandomNumber = WeightedRandomNumber.create();
-  }
-  get hasCurrentCard() {
-    return this.cardIdx !== null && this.cardIdx !== void 0;
-  }
-  get currentCard() {
-    let result = null;
-    if (this.cardIdx !== null && this.cardIdx !== void 0 && this.deck !== null)
-      result = this.deck.getRepItem(this.cardIdx, this.cardListType);
-    return result;
-  }
-  setDeck(deck) {
-    this.deck = deck;
-    this.setCardListType(null);
-  }
-  //
-  // 0 <= cardIndex < newFlashcards.length + dueFlashcards.length
-  //
-  setNewOrDueCardIdx(cardIndex) {
-    let cardListType = 0 /* NewItem */;
-    let index = cardIndex;
-    if (cardIndex >= this.deck.newRepItems.length) {
-      cardListType = 1 /* DueItem */;
-      index = cardIndex - this.deck.newRepItems.length;
-    }
-    this.setCardListType(cardListType, index);
-  }
-  setCardListType(cardListType, cardIdx = null) {
-    this.cardListType = cardListType;
-    this.cardIdx = cardIdx;
-  }
-  nextCard() {
-    if (this.iteratorOrder.repItemOrder === 4 /* EveryCardRandomDeckAndCard */) {
-      this.nextRandomCard();
-    } else {
-      if (this.cardListType === null) {
-        this.setCardListType(this.preferredCardListType);
-      }
-      if (!this.nextCardWithinCurrentList()) {
-        if (this.cardListType === this.preferredCardListType) {
-          this.setCardListType(Deck.otherListType(this.cardListType));
-          if (!this.nextCardWithinCurrentList()) {
-            this.setCardListType(null);
-          }
-        } else {
-          this.cardIdx = null;
-        }
-      }
-    }
-    return this.cardIdx !== null && this.cardIdx !== void 0;
-  }
-  nextRandomCard() {
-    const newCount = this.deck.newRepItems.length;
-    const dueCount = this.deck.dueRepItems.length;
-    if (newCount + dueCount > 0) {
-      const weights = {};
-      if (newCount > 0) weights[0 /* NewItem */] = newCount;
-      if (dueCount > 0) weights[1 /* DueItem */] = dueCount;
-      const [cardListType, index] = this.weightedRandomNumber.getRandomValues(weights);
-      this.setCardListType(cardListType, index);
-    } else {
-      this.setCardListType(null);
-    }
-  }
-  nextCardWithinCurrentList() {
-    const cardList = this.deck.getRepItemListForRepItemState(this.cardListType);
-    const result = cardList.length > 0;
-    if (result) {
-      switch (this.iteratorOrder.repItemOrder) {
-        case 2 /* DueFirstSequential */:
-        case 0 /* NewFirstSequential */:
-          this.cardIdx = 0;
-          break;
-        case 3 /* DueFirstRandom */:
-        case 1 /* NewFirstRandom */:
-          this.cardIdx = globalRandomNumberProvider.getInteger(0, cardList.length - 1);
-          break;
-      }
-    }
-    return result;
-  }
-  moveCurrentCardToEndOfList() {
-    this.ensureCurrentCard();
-    const card = this.currentCard;
-    this.deck.deleteRepItemAtIndex(this.cardIdx, this.cardListType);
-    this.deck.appendRepItemToRootDeck(card);
-    this.setNoCurrentCard();
-  }
-  setNoCurrentCard() {
-    this.cardIdx = null;
-  }
-  ensureCurrentCard() {
-    if (this.cardIdx === null || this.cardListType === null) throw "no current card";
-  }
-  static getCardListTypeForIterator(iteratorOrder) {
-    let result = null;
-    switch (iteratorOrder.repItemOrder) {
-      case 3 /* DueFirstRandom */:
-      case 2 /* DueFirstSequential */:
-        result = 1 /* DueItem */;
-        break;
-      case 1 /* NewFirstRandom */:
-      case 0 /* NewFirstSequential */:
-        result = 0 /* NewItem */;
-        break;
-    }
-    return result;
-  }
-};
-var DeckTreeIterator = class _DeckTreeIterator {
-  get hasCurrentCard() {
-    return this.deckIdx !== null && this.deckIdx !== void 0 && this.singleDeckIterator.hasCurrentCard;
-  }
-  get currentTopicPath() {
-    var _a2;
-    return (_a2 = this.currentDeck) == null ? void 0 : _a2.getTopicPath();
-  }
-  get currentDeck() {
-    if (this.deckIdx === null || this.deckIdx === void 0) return null;
-    return this.deckArray[this.deckIdx];
-  }
-  get currentRepItem() {
-    let result = null;
-    if (this.deckIdx !== null && this.deckIdx !== void 0 && this.singleDeckIterator.hasCurrentCard)
-      result = this.singleDeckIterator.currentCard;
-    return result;
-  }
-  get currentQuestion() {
-    var _a2;
-    return ((_a2 = this.currentRepItem) == null ? void 0 : _a2.question) || null;
-  }
-  constructor(iteratorOrder, baseDeckTree) {
-    this.singleDeckIterator = new SingleDeckIterator(iteratorOrder);
-    this.iteratorOrder = iteratorOrder;
-    this.weightedRandomNumber = WeightedRandomNumber.create();
-    this.setBaseDeck(baseDeckTree);
-  }
-  setBaseDeck(baseDeck) {
-    this.baseDeckTree = baseDeck;
-    this.singleDeckIterator.setNoCurrentCard();
-  }
-  setIteratorTopicPath(topicPath) {
-    const iteratorDeck = this.baseDeckTree.getDeck(topicPath);
-    this.deckArray = _DeckTreeIterator.filterForDecksWithCards(iteratorDeck.toDeckArray());
-    this.setDeckIdx(null);
-  }
-  static filterForDecksWithCards(sourceArray) {
-    const result = [];
-    for (let idx = 0; idx < sourceArray.length; idx++) {
-      const deck = sourceArray[idx];
-      const hasAnyCards = deck.getRepItemCount(2 /* AnyItem */, false) > 0;
-      if (hasAnyCards) {
-        result.push(deck);
-      }
-    }
-    return result;
-  }
-  setDeckIdx(deckIdx) {
-    this.deckIdx = deckIdx;
-    if (deckIdx !== null && deckIdx !== void 0)
-      this.singleDeckIterator.setDeck(this.deckArray[deckIdx]);
-  }
-  nextRepItem() {
-    let result = false;
-    if (this.hasCurrentCard) {
-      this.baseDeckTree.deleteCardFromAllDecks(this.currentRepItem, true);
-    }
-    if (this.iteratorOrder.repItemOrder === 4 /* EveryCardRandomDeckAndCard */) {
-      result = this.nextCardEveryCardRandomDeck();
-    } else {
-      if (this.deckIdx === null || this.deckIdx === void 0) {
-        this.chooseNextDeck(true);
-      }
-      while (this.deckIdx < this.deckArray.length) {
-        if (this.singleDeckIterator.nextCard()) {
-          result = true;
-          break;
-        }
-        this.chooseNextDeck(false);
-      }
-    }
-    if (!result) this.deckIdx = null;
-    return result;
-  }
-  chooseNextDeck(firstTime) {
-    switch (this.iteratorOrder.deckOrder) {
-      case 0 /* PrevDeckComplete_Sequential */:
-        this.deckIdx = firstTime ? 0 : this.deckIdx + 1;
-        break;
-      case 1 /* PrevDeckComplete_Random */: {
-        const weights = {};
-        let hasDeck = false;
-        for (let i2 = 0; i2 < this.deckArray.length; i2++) {
-          if (this.deckArray[i2].getRepItemCount(2 /* AnyItem */, false)) {
-            weights[i2] = 1;
-            hasDeck = true;
-          }
-        }
-        if (hasDeck) {
-          const [deckIdx, _2] = this.weightedRandomNumber.getRandomValues(weights);
-          this.deckIdx = deckIdx;
-        } else {
-          this.deckIdx = this.deckArray.length;
-        }
-        break;
-      }
-    }
-    if (this.deckIdx < this.deckArray.length) {
-      this.singleDeckIterator.setDeck(this.deckArray[this.deckIdx]);
-    }
-  }
-  nextCardEveryCardRandomDeck() {
-    const weights = {};
-    for (let i2 = 0; i2 < this.deckArray.length; i2++) {
-      const cardCount = this.deckArray[i2].getRepItemCount(
-        2 /* AnyItem */,
-        false
-      );
-      if (cardCount) {
-        weights[i2] = cardCount;
-      }
-    }
-    if (Object.keys(weights).length === 0) return false;
-    const [deckIdx, cardIdx] = this.weightedRandomNumber.getRandomValues(weights);
-    this.setDeckIdx(deckIdx);
-    this.singleDeckIterator.setNewOrDueCardIdx(cardIdx);
-    return true;
-  }
-  deleteCurrentQuestionFromAllDecks() {
-    this.singleDeckIterator.ensureCurrentCard();
-    this.baseDeckTree.deleteQuestionFromAllDecks(this.currentQuestion, false);
-    this.singleDeckIterator.setNoCurrentCard();
-    return this.nextRepItem();
-  }
-  deleteCurrentRepItemFromAllDecks() {
-    this.singleDeckIterator.ensureCurrentCard();
-    this.baseDeckTree.deleteCardFromAllDecks(this.currentRepItem, true);
-    this.singleDeckIterator.setNoCurrentCard();
-    return this.nextRepItem();
-  }
-  moveCurrentRepItemToEndOfList() {
-    this.singleDeckIterator.moveCurrentCardToEndOfList();
-  }
-  removeCurrentDeckIfEmpty() {
-    if (this.currentDeck.getRepItemCount(2 /* AnyItem */, false) === 0) {
-      this.deckArray.splice(this.deckIdx, 1);
-      if (this.deckIdx < this.deckArray.length) this.setDeckIdx(this.deckIdx);
-    }
-  }
-};
 
 // src/data/data-structures/deck/stats.ts
 var Stats = class {
@@ -33247,7 +33371,7 @@ var OsrCore = class {
       };
       globalDateProvider.setDayBoundary(dayBoundary);
     } catch (e2) {
-      console.error("Invalid format for start of day", e2);
+      console.warn("Invalid format for start of day", e2);
     }
   }
   /**
@@ -33282,7 +33406,7 @@ var OsrCore = class {
       };
       globalDateProvider.setDayBoundary(dayBoundary);
     } catch (e2) {
-      console.error("Invalid format for start of day", e2);
+      console.warn("Invalid format for start of day", e2);
     }
   }
   /**
@@ -33835,7 +33959,23 @@ var NoteDataStoreAlgorithmOsr = class {
 // src/scheduling/algorithms/fsrs/fsrs-helpers.ts
 var import_moment5 = __toESM(require_moment());
 
-// node_modules/.pnpm/ts-fsrs@5.3.1/node_modules/ts-fsrs/dist/index.mjs
+// node_modules/.pnpm/ts-fsrs@5.4.1/node_modules/ts-fsrs/dist/index.mjs
+var FSRSError = class _FSRSError extends Error {
+  constructor(message = "FSRS Error") {
+    var _a2;
+    super(message);
+    this.name = "FSRSError";
+    (_a2 = Error.captureStackTrace) == null ? void 0 : _a2.call(Error, this, _FSRSError);
+  }
+};
+var FSRSValidationError = class _FSRSValidationError extends FSRSError {
+  constructor(message) {
+    var _a2;
+    super(message);
+    this.name = "FSRSValidationError";
+    (_a2 = Error.captureStackTrace) == null ? void 0 : _a2.call(Error, this, _FSRSValidationError);
+  }
+};
 var State = /* @__PURE__ */ ((State2) => {
   State2[State2["New"] = 0] = "New";
   State2[State2["Learning"] = 1] = "Learning";
@@ -33866,13 +34006,13 @@ var TypeConvert = class _TypeConvert {
       const restOfString = value.slice(1).toLowerCase();
       const ret = Rating[`${firstLetter}${restOfString}`];
       if (ret === void 0) {
-        throw new Error(`Invalid rating:[${value}]`);
+        throw new FSRSValidationError(`Invalid rating:[${value}]`);
       }
       return ret;
     } else if (typeof value === "number") {
       return value;
     }
-    throw new Error(`Invalid rating:[${value}]`);
+    throw new FSRSValidationError(`Invalid rating:[${value}]`);
   }
   static state(value) {
     if (typeof value === "string") {
@@ -33880,13 +34020,13 @@ var TypeConvert = class _TypeConvert {
       const restOfString = value.slice(1).toLowerCase();
       const ret = State[`${firstLetter}${restOfString}`];
       if (ret === void 0) {
-        throw new Error(`Invalid state:[${value}]`);
+        throw new FSRSValidationError(`Invalid state:[${value}]`);
       }
       return ret;
     } else if (typeof value === "number") {
       return value;
     }
-    throw new Error(`Invalid state:[${value}]`);
+    throw new FSRSValidationError(`Invalid state:[${value}]`);
   }
   static time(value) {
     if (value instanceof Date) {
@@ -33900,12 +34040,12 @@ var TypeConvert = class _TypeConvert {
       if (!Number.isNaN(timestamp)) {
         return new Date(timestamp);
       } else {
-        throw new Error(`Invalid date:[${value}]`);
+        throw new FSRSValidationError(`Invalid date:[${value}]`);
       }
     } else if (typeof value === "number") {
       return new Date(value);
     }
-    throw new Error(`Invalid date:[${value}]`);
+    throw new FSRSValidationError(`Invalid date:[${value}]`);
   }
   static review_log(log) {
     return {
@@ -33936,7 +34076,7 @@ function date_scheduler(now2, t3, isDay) {
 }
 function date_diff(now2, pre, unit) {
   if (!now2 || !pre) {
-    throw new Error("Invalid date");
+    throw new FSRSValidationError("Invalid date");
   }
   const diff = TypeConvert.time(now2).getTime() - TypeConvert.time(pre).getTime();
   let r2 = 0;
@@ -34049,7 +34189,7 @@ var ConvertStepUnitToMinutes = (step) => {
   const unit = step.slice(-1);
   const value = parseInt(step.slice(0, -1), 10);
   if (Number.isNaN(value) || !Number.isFinite(value) || value < 0) {
-    throw new Error(`Invalid step value: ${step}`);
+    throw new FSRSValidationError(`Invalid step value: ${step}`);
   }
   switch (unit) {
     case "m":
@@ -34059,7 +34199,9 @@ var ConvertStepUnitToMinutes = (step) => {
     case "d":
       return value * 1440;
     default:
-      throw new Error(`Invalid step unit: ${step}, expected m/h/d`);
+      throw new FSRSValidationError(
+        `Invalid step unit: ${step}, expected m/h/d`
+      );
   }
 };
 var BasicLearningStepsStrategy = (params, state, cur_step) => {
@@ -34146,8 +34288,8 @@ var AbstractScheduler = class {
     this.init();
   }
   checkGrade(grade) {
-    if (!Number.isFinite(grade) || grade < 0 || grade > 4) {
-      throw new Error(`Invalid grade "${grade}",expected 1-4`);
+    if (!Number.isFinite(grade) || grade < 1 || grade > 4) {
+      throw new FSRSValidationError(`Invalid grade "${grade}",expected 1-4`);
     }
   }
   init() {
@@ -34288,7 +34430,7 @@ function alea(seed) {
   };
   return prng;
 }
-var version2 = "5.3.1";
+var version2 = "5.4.1";
 var default_request_retention = 0.9;
 var default_maximum_interval = 36500;
 var default_enable_fuzz = false;
@@ -34356,15 +34498,23 @@ var CLAMP_PARAMETERS = (w17_w18_ceiling, enable_short_term = default_enable_shor
   [0.1, 0.8]
 ];
 var clipParameters = (parameters, numRelearningSteps, enableShortTerm = default_enable_short_term) => {
-  let w17_w18_ceiling = W17_W18_Ceiling;
-  if (Math.max(0, numRelearningSteps) > 1) {
-    const value = -(Math.log(parameters[11]) + Math.log(Math.pow(2, parameters[13]) - 1) + parameters[14] * 0.3) / numRelearningSteps;
-    w17_w18_ceiling = clamp(+value.toFixed(8), 0.01, 2);
-  }
-  const clip = CLAMP_PARAMETERS(w17_w18_ceiling, enableShortTerm).slice(
+  const clip = CLAMP_PARAMETERS(W17_W18_Ceiling, enableShortTerm).slice(
     0,
     parameters.length
   );
+  if (Math.max(0, numRelearningSteps) > 1) {
+    const w11 = clamp(parameters[11] || 0, clip[11][0], clip[11][1]);
+    const w13 = clamp(parameters[13] || 0, clip[13][0], clip[13][1]);
+    const w14 = clamp(parameters[14] || 0, clip[14][0], clip[14][1]);
+    const value = -(Math.log(w11) + Math.log(Math.pow(2, w13) - 1) + w14 * 0.3) / numRelearningSteps;
+    const w17_w18_ceiling = clamp(
+      roundTo(Math.sqrt(Math.max(value, 0)), 8),
+      0.01,
+      W17_W18_Ceiling
+    );
+    if (clip[17]) clip[17] = [clip[17][0], w17_w18_ceiling];
+    if (clip[18]) clip[18] = [clip[18][0], w17_w18_ceiling];
+  }
   return clip.map(
     ([min, max], index) => clamp(parameters[index] || 0, min, max)
   );
@@ -34489,7 +34639,9 @@ var FSRSAlgorithm = class {
    */
   calculate_interval_modifier(request_retention) {
     if (request_retention <= 0 || request_retention > 1) {
-      throw new Error("Requested retention rate should be in the range (0,1]");
+      throw new FSRSValidationError(
+        "Requested retention rate should be in the range (0,1]"
+      );
     }
     const { decay, factor } = computeDecayFactor(this.param.w);
     return roundTo((Math.pow(request_retention, 1 / decay) - 1) / factor, 8);
@@ -34697,10 +34849,10 @@ var FSRSAlgorithm = class {
       stability: 0
     };
     if (t3 < 0) {
-      throw new Error(`Invalid delta_t "${t3}"`);
+      throw new FSRSValidationError(`Invalid delta_t "${t3}"`);
     }
     if (g2 < 0 || g2 > 4) {
-      throw new Error(`Invalid grade "${g2}"`);
+      throw new FSRSValidationError(`Invalid grade "${g2}"`);
     }
     if (d2 === 0 && s2 === 0) {
       return {
@@ -34715,7 +34867,7 @@ var FSRSAlgorithm = class {
       };
     }
     if (d2 < 1 || s2 < S_MIN) {
-      throw new Error(
+      throw new FSRSValidationError(
         `Invalid memory state { difficulty: ${d2}, stability: ${s2} }`
       );
     }
@@ -35094,7 +35246,9 @@ var Reschedule = class {
    */
   handleManualRating(card, state, reviewed, elapsed_days, stability, difficulty, due) {
     if (typeof state === "undefined") {
-      throw new Error("reschedule: state is required for manual rating");
+      throw new FSRSValidationError(
+        "reschedule: state is required for manual rating"
+      );
     }
     let log;
     let next_card;
@@ -35115,7 +35269,9 @@ var Reschedule = class {
       next_card.last_review = reviewed;
     } else {
       if (typeof due === "undefined") {
-        throw new Error("reschedule: due is required for manual rating");
+        throw new FSRSValidationError(
+          "reschedule: due is required for manual rating"
+        );
       }
       const scheduled_days = date_diff(due, reviewed, "days");
       log = {
@@ -35204,6 +35360,9 @@ var Reschedule = class {
     );
   }
 };
+function applyAfterHandler(value, afterHandler) {
+  return typeof afterHandler === "function" ? afterHandler(value) : value;
+}
 var FSRS = class extends FSRSAlgorithm {
   constructor(param) {
     super(param);
@@ -35319,11 +35478,7 @@ var FSRS = class extends FSRSAlgorithm {
   repeat(card, now2, afterHandler) {
     const instance = this.getScheduler(card, now2);
     const recordLog = instance.preview();
-    if (afterHandler && typeof afterHandler === "function") {
-      return afterHandler(recordLog);
-    } else {
-      return recordLog;
-    }
+    return applyAfterHandler(recordLog, afterHandler);
   }
   /**
    * Display the collection of cards and logs for the card scheduled at the current time, after applying a specific grade rating.
@@ -35383,14 +35538,10 @@ var FSRS = class extends FSRSAlgorithm {
     const instance = this.getScheduler(card, now2);
     const g2 = TypeConvert.rating(grade);
     if (g2 === Rating.Manual) {
-      throw new Error("Cannot review a manual rating");
+      throw new FSRSValidationError("Cannot review a manual rating");
     }
     const recordLogItem = instance.review(g2);
-    if (afterHandler && typeof afterHandler === "function") {
-      return afterHandler(recordLogItem);
-    } else {
-      return recordLogItem;
-    }
+    return applyAfterHandler(recordLogItem, afterHandler);
   }
   /**
    * Get the retrievability of the card
@@ -35435,7 +35586,7 @@ var FSRS = class extends FSRSAlgorithm {
     const processedCard = TypeConvert.card(card);
     const processedLog = TypeConvert.review_log(log);
     if (processedLog.rating === Rating.Manual) {
-      throw new Error("Cannot rollback a manual rating");
+      throw new FSRSValidationError("Cannot rollback a manual rating");
     }
     let last_due;
     let last_review;
@@ -35467,11 +35618,7 @@ var FSRS = class extends FSRSAlgorithm {
       state: processedLog.state,
       last_review
     };
-    if (afterHandler && typeof afterHandler === "function") {
-      return afterHandler(prevCard);
-    } else {
-      return prevCard;
-    }
+    return applyAfterHandler(prevCard, afterHandler);
   }
   /**
    *
@@ -35554,11 +35701,7 @@ var FSRS = class extends FSRSAlgorithm {
       last_review: processedCard.last_review
     };
     const recordLogItem = { card: forget_card, log: forget_log };
-    if (afterHandler && typeof afterHandler === "function") {
-      return afterHandler(recordLogItem);
-    } else {
-      return recordLogItem;
-    }
+    return applyAfterHandler(recordLogItem, afterHandler);
   }
   /**
    * Reschedules the current card and returns the rescheduled collections and reschedule item.
@@ -35625,15 +35768,9 @@ var FSRS = class extends FSRSAlgorithm {
       len ? collections[len - 1] : void 0,
       updateMemoryState
     );
-    if (recordLogHandler && typeof recordLogHandler === "function") {
-      return {
-        collections: collections.map(recordLogHandler),
-        reschedule_item: manual_item ? recordLogHandler(manual_item) : null
-      };
-    }
     return {
-      collections,
-      reschedule_item: manual_item
+      collections: typeof recordLogHandler === "function" ? collections.map(recordLogHandler) : collections,
+      reschedule_item: manual_item ? applyAfterHandler(manual_item, recordLogHandler) : null
     };
   }
 };
@@ -35950,8 +36087,8 @@ var NotesDataStore = class {
 
 // src/data/data-structures/card/questions/question-postponement-list.ts
 var QuestionPostponementList = class {
-  constructor(plugin, settings, list) {
-    this.plugin = plugin;
+  constructor(pluginDataManager, settings, list) {
+    this.pluginDataManager = pluginDataManager;
     this.settings = settings;
     this.list = list;
   }
@@ -36000,8 +36137,8 @@ var QuestionPostponementList = class {
    * @returns {Promise<void>} - A promise that resolves when the list is written.
    */
   async write() {
-    if (this.plugin === null || this.plugin.dataManager === null) return;
-    await this.plugin.dataManager.savePluginData();
+    if (this.pluginDataManager === null) return;
+    await this.pluginDataManager.savePluginData();
   }
 };
 
@@ -36093,19 +36230,6 @@ var SRNoteTFile = class extends SRTFile {
       result.push(headingObj.heading);
     }
     return result;
-  }
-};
-
-// src/data/plugin-data.ts
-var DEFAULT_DATA = {
-  settings: DEFAULT_SETTINGS,
-  buryDate: "",
-  buryList: [],
-  historyDeck: null,
-  scheduleData: {
-    version: 1,
-    noteSchedules: {},
-    cardSchedules: {}
   }
 };
 
@@ -36417,17 +36541,19 @@ var ObsidianVaultNoteLinkInfoFinder = class {
 
 // src/data/data-manager.ts
 var DataManager = class {
-  constructor(plugin) {
-    this._data = null;
+  constructor(plugin, pluginDataManager, settingsManager) {
+    // TODO: Refactor so that the plugin data manager and the settings manager are separate from the data manager
     this._osrCore = null;
     this._syncLock = false;
     this.plugin = plugin;
+    this.pluginDataManager = pluginDataManager;
+    this.settingsManager = settingsManager;
   }
   /**
    * Checks if the data has been loaded.
    */
   isDataLoaded() {
-    return this._data !== null;
+    return this.pluginDataManager.isLoaded;
   }
   /**
    * Checks if the OSR app core has been loaded.
@@ -36435,12 +36561,12 @@ var DataManager = class {
   isOsrCoreLoaded() {
     return this._osrCore !== null;
   }
+  // TODO: Remove once everything is migrated to the settings manager and plugin data manager
   get data() {
-    if (this._data === null) throw new Error("Data not loaded!!");
-    return this._data;
+    return this.pluginDataManager.pluginData;
   }
   set data(data) {
-    this._data = data;
+    this.pluginDataManager.pluginData = data;
   }
   get osrCore() {
     if (this._osrCore === null) throw new Error("SR plugin or OSR core not initialized!!!");
@@ -36455,13 +36581,8 @@ var DataManager = class {
   /**
    * Loads the plugin data from the data.json from the plugin's folder.
    */
-  async loadData() {
-    const loadedData = await this.plugin.loadData();
-    if (loadedData == null ? void 0 : loadedData.settings) upgradeSettings(loadedData.settings);
-    this.data = Object.assign({}, DEFAULT_DATA, loadedData);
-    this.data.settings = Object.assign({}, DEFAULT_SETTINGS, this.data.settings);
-    setDebugParser(this.data.settings.showParserDebugMessages);
-    this.setupDataStoreAndAlgorithmInstances(this.data.settings);
+  loadData() {
+    this.setupDataStoreAndAlgorithmInstances(this.settingsManager.settings);
   }
   /**
    * Initializes the OSR app core.
@@ -36471,17 +36592,16 @@ var DataManager = class {
    * @returns {Promise<void>} - A promise that resolves when the OSR app core is initialized.
    */
   async initOSRCore(noteReviewQueue, onOsrVaultDataChanged) {
-    if (this.data === null) throw new Error("Data not loaded!!");
     const questionPostponementList = new QuestionPostponementList(
-      this.plugin,
-      this.data.settings,
-      this.data.buryList
+      this.pluginDataManager,
+      this.settingsManager.settings,
+      this.pluginDataManager.pluginData.buryList
     );
-    await questionPostponementList.clearIfNewDay(this.data);
+    await questionPostponementList.clearIfNewDay(this.pluginDataManager.pluginData);
     this.osrCore = new OsrCore(
       questionPostponementList,
       new ObsidianVaultNoteLinkInfoFinder(this.plugin.app.metadataCache),
-      this.data.settings,
+      this.settingsManager.settings,
       onOsrVaultDataChanged,
       noteReviewQueue,
       this.plugin.getObsidianRtlSetting()
@@ -36496,7 +36616,10 @@ var DataManager = class {
       this.osrCore.loadInitialStateOfCore();
       const notes = this.plugin.app.vault.getMarkdownFiles();
       for (const noteFile of notes) {
-        if (SettingsUtil.isPathInFoldersToIgnore(this.data.settings, noteFile.path))
+        if (SettingsUtil.isPathInFoldersToIgnore(
+          this.settingsManager.settings,
+          noteFile.path
+        ))
           continue;
         const file = this.createSRNoteTFile(noteFile);
         await this.osrCore.processFile(file);
@@ -36544,14 +36667,13 @@ var DataManager = class {
    */
   async sync() {
     if (this.osrCore === null) throw new Error("OSR app core not initialized!!!");
-    if (this.data === null) throw new Error("Data not loaded!!");
     if (this.syncLock) {
       return;
     }
     const now2 = window.moment(Date.now());
     this.osrCore.defaultTextDirection = this.plugin.getObsidianRtlSetting();
     await this.loadVault();
-    if (this.data.settings.showSchedulingDebugMessages) {
+    if (this.settingsManager.settings.showSchedulingDebugMessages) {
       console.log(`SR: ${t("DECKS")}`, this.osrCore.reviewableDeckTree);
       console.log(
         "SR: " + t("SYNC_TIME_TAKEN", {
@@ -36567,12 +36689,11 @@ var DataManager = class {
    * @returns {Promise<Note | null>} - A promise that resolves with the loaded note or null if not found.
    */
   async loadNote(noteFile) {
-    if (this.data === null) throw new Error("Data not loaded!!");
-    const loader = new NoteFileLoader(this.data.settings);
+    const loader = new NoteFileLoader(this.settingsManager.settings);
     const srFile = this.createSRNoteTFile(noteFile);
     const folderTopicPath = TopicPath.getFolderPathFromFilename(
       srFile,
-      this.data.settings
+      this.settingsManager.settings
     );
     const note = await loader.load(
       this.createSRNoteTFile(noteFile),
@@ -36580,7 +36701,7 @@ var DataManager = class {
       folderTopicPath
     );
     if (note && note.hasChanged) {
-      await note.writeNoteFile(this.data.settings);
+      await note.writeNoteFile(this.settingsManager.settings);
     }
     return note;
   }
@@ -36592,23 +36713,26 @@ var DataManager = class {
    * @returns {Promise<void>} - A promise that resolves when the review response is saved.
    */
   async saveNoteReviewResponse(note, response) {
-    if (this.data === null) throw new Error("Data not loaded!!");
     if (this.osrCore === null) throw new Error("OSR app core not initialized!!!");
     if (this.plugin.nextNoteReviewHandler === null)
       throw new Error("Next note review handler not initialized!!!");
     const noteSrTFile = this.createSRNoteTFile(note);
-    if (SettingsUtil.isPathInFoldersToIgnore(this.data.settings, note.path)) {
+    if (SettingsUtil.isPathInFoldersToIgnore(this.settingsManager.settings, note.path)) {
       new import_obsidian36.Notice(t("NOTE_IN_IGNORED_FOLDER"));
       return;
     }
     const tags = noteSrTFile.getAllTagsFromCache();
-    if (!SettingsUtil.isAnyTagANoteReviewTag(this.data.settings, tags)) {
+    if (!SettingsUtil.isAnyTagANoteReviewTag(this.settingsManager.settings, tags)) {
       new import_obsidian36.Notice(t("PLEASE_TAG_NOTE"));
       return;
     }
-    await this.osrCore.saveNoteReviewResponse(noteSrTFile, response, this.data.settings);
+    await this.osrCore.saveNoteReviewResponse(
+      noteSrTFile,
+      response,
+      this.settingsManager.settings
+    );
     new import_obsidian36.Notice(t("RESPONSE_RECEIVED"));
-    if (this.data.settings.autoNextNote) {
+    if (this.settingsManager.settings.autoNextNote) {
       await this.plugin.nextNoteReviewHandler.autoReviewNextNote();
     }
   }
@@ -36618,8 +36742,115 @@ var DataManager = class {
    * @returns {Promise<void>} - A promise that resolves when the plugin data is saved.
    */
   async savePluginData() {
-    if (this.data === null) throw new Error("Data not loaded!!");
-    await this.plugin.saveData(this.data);
+    try {
+      await this.pluginDataManager.savePluginData();
+    } catch (error) {
+      console.warn("DataManager: Error saving plugin data", error);
+    }
+  }
+};
+
+// src/data/plugin-data.ts
+var DEFAULT_DATA = {
+  settings: DEFAULT_SETTINGS,
+  buryDate: "",
+  buryList: [],
+  historyDeck: null,
+  scheduleData: {
+    version: 1,
+    noteSchedules: {},
+    cardSchedules: {}
+  }
+};
+
+// src/data/plugin-data-manager.ts
+var PluginDataError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PluginDataError";
+  }
+};
+var PluginDataManager = class {
+  constructor(plugin) {
+    this._pluginData = null;
+    this.plugin = plugin;
+  }
+  get isLoaded() {
+    return this.pluginData !== null;
+  }
+  get pluginData() {
+    if (this._pluginData === null)
+      throw new PluginDataError(
+        "Cant access the plugin data, as the plugin data is not yet loaded!!"
+      );
+    return this._pluginData;
+  }
+  set pluginData(pluginData) {
+    this._pluginData = pluginData;
+  }
+  /**
+   * Loads the plugin data from the data.json from the plugin's folder.
+   */
+  async loadData() {
+    const loadedData = await this.plugin.loadData();
+    if (loadedData == null ? void 0 : loadedData.settings) upgradeSettings(loadedData.settings);
+    this._pluginData = Object.assign({}, DEFAULT_DATA, loadedData);
+    this._pluginData.settings = Object.assign({}, DEFAULT_SETTINGS, this._pluginData.settings);
+    setDebugParser(this._pluginData.settings.showParserDebugMessages);
+  }
+  /**
+   * Saves the plugin data.
+   *
+   * @returns {Promise<void>} - A promise that resolves when the plugin data is saved.
+   * @throws {Error} - Throws an error if the plugin data is not loaded.
+   */
+  async savePluginData() {
+    if (this.pluginData === null)
+      throw new PluginDataError("Cant save plugin data, as the data is not yet loaded!!");
+    await this.plugin.saveData(this.pluginData);
+  }
+  /**
+   * Writes the settings to the plugin data.
+   *
+   * @param {SRSettings} settings - The settings to write.
+   * @returns {Promise<void>} - A promise that resolves when the settings are written.
+   * @throws {Error} - Throws an error if the plugin data is not loaded.
+   */
+  async writeSettings(settings) {
+    if (this.pluginData === null)
+      throw new PluginDataError(
+        "Cant write settings, as the plugin data is not yet loaded!!"
+      );
+    this.pluginData.settings = settings;
+    await this.savePluginData();
+  }
+};
+
+// src/data/settings-manager.ts
+var SettingsManager = class {
+  constructor(settings, writeSettings) {
+    this._settings = settings;
+    this.writeSettings = writeSettings;
+  }
+  get settings() {
+    return this._settings;
+  }
+  /**
+   * Saves the settings.
+   *
+   * @param {SRSettings} settings - The settings to save.
+   * @returns {Promise<void>} - A promise that resolves when the settings are saved.
+   */
+  async saveSettings(settings) {
+    this._settings = settings;
+    try {
+      await this.writeSettings(this._settings);
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+  async save() {
+    await this.saveSettings(this._settings);
   }
 };
 
@@ -36848,134 +37079,24 @@ var NoteReviewQueue = class {
   }
 };
 
-// src/main.ts
-var SRPlugin = class _SRPlugin extends import_obsidian39.Plugin {
-  constructor() {
-    super(...arguments);
-    this._uiManager = null;
-    this._dataManager = null;
-    this._nextNoteReviewHandler = null;
-    this._commandManager = null;
-    this.isInitialized = false;
+// src/scheduling/reminder-manager.ts
+var ReminderManager = class {
+  constructor(plugin, uiManager, dataManager) {
     this.reviewReminderTimer = null;
     this.isReviewReminderChecking = false;
+    this.plugin = plugin;
+    this.uiManager = uiManager;
+    this.dataManager = dataManager;
   }
-  onload() {
-    this.uiManager = new UIManager2(this);
-    this.commandManager = new CommandManager(this);
-    this.app.workspace.onLayoutReady(async () => {
-      this.dataManager = new DataManager(this);
-      await this.dataManager.loadData();
-      if (this.dataManager.data.settings.preferredLocale !== "-") {
-        LocaleManagerInstance.getInstance().currentLocale = this.dataManager.data.settings.preferredLocale;
-      }
-      const noteReviewQueue = new NoteReviewQueue();
-      this._nextNoteReviewHandler = new NextNoteReviewHandler(
-        this.app,
-        this.dataManager.data.settings,
-        noteReviewQueue
-      );
-      await this.dataManager.initOSRCore(noteReviewQueue, async () => {
-        await this.onOsrVaultDataChanged();
-      });
-      await this.uiManager.onLayoutReady();
-      this.commandManager.onLayoutReady();
-      this.isInitialized = true;
-      this.restartReviewReminders();
-    });
-  }
-  get uiManager() {
-    if (this._uiManager === null) throw new Error("UI manager not initialized!!!");
-    return this._uiManager;
-  }
-  set uiManager(uiManager) {
-    this._uiManager = uiManager;
-  }
-  get nextNoteReviewHandler() {
-    if (this._nextNoteReviewHandler === null)
-      throw new Error("Next note review handler not initialized!!!");
-    return this._nextNoteReviewHandler;
-  }
-  get commandManager() {
-    if (this._commandManager === null) throw new Error("Command manager not initialized!!!");
-    return this._commandManager;
-  }
-  set commandManager(commandManager) {
-    this._commandManager = commandManager;
-  }
-  isUiManagerLoaded() {
-    return this._uiManager !== null;
-  }
-  get dataManager() {
-    if (this._dataManager === null) throw new Error("Data manager not initialized!!!");
-    return this._dataManager;
-  }
-  set dataManager(dataManager) {
-    this._dataManager = dataManager;
-  }
-  isDataManagerLoaded() {
-    return this._dataManager !== null;
-  }
-  onunload() {
-    this.stopReviewReminders();
-    this.app.workspace.getLeavesOfType(REVIEW_QUEUE_VIEW_TYPE).forEach((leaf) => leaf.detach());
-    this.uiManager.destroy();
-    this.commandManager.onunload();
-  }
+  /**
+   * Restarts the periodic review-reminder loop once the plugin is fully initialized.
+   *
+   * The reminder feature depends on loaded settings, synced review data, and a ready UI.
+   * Running it earlier risks duplicate startup checks or reminders based on stale state.
+   */
   restartReviewReminders() {
     this.stopReviewReminders();
     this.startReviewReminders();
-  }
-  addCustomHotkeys() {
-    this.commandManager.addCustomHotkeys();
-  }
-  removeCustomHotkeys() {
-    this.commandManager.removeCustomHotkeys();
-  }
-  getPreparedReviewSequencer(fullDeckTree, remainingDeckTree, reviewMode) {
-    const deckIterator = _SRPlugin.createDeckTreeIterator(
-      this.dataManager.data.settings
-    );
-    const reviewSequencer = new FlashcardReviewSequencer(
-      reviewMode,
-      deckIterator,
-      this.dataManager.data.settings,
-      SRAlgorithm.getInstance(),
-      this.dataManager.osrCore.questionPostponementList,
-      this.dataManager.osrCore.dueDateFlashcardHistogram
-    );
-    reviewSequencer.setDeckTree(fullDeckTree, remainingDeckTree);
-    return { reviewSequencer, mode: reviewMode };
-  }
-  async getPreparedDecksForSingleNoteReview(file, mode) {
-    const note = await this.dataManager.loadNote(file);
-    const deckTree = new Deck("root", null);
-    if (note) {
-      note.appendCardsToDeck(deckTree);
-    }
-    const remainingDeckTree = DeckTreeFilter.filterForRemainingRepItems(
-      this.dataManager.osrCore.questionPostponementList,
-      deckTree,
-      mode
-    );
-    return { deckTree, remainingDeckTree, mode };
-  }
-  /**
-   * Gets the text direction setting for the current Obsidian instance.
-   */
-  getObsidianRtlSetting() {
-    return activeDocument.body.hasClass("mod-rtl") ? 2 /* Rtl */ : 1 /* Ltr */;
-  }
-  /**
-   * Called when the OSR app core's data has changed.
-   *
-   * Anything that needs to be updated in the UI because of this change should be done here.
-   */
-  async onOsrVaultDataChanged() {
-    await this.uiManager.updateStatusBar();
-    if (this.dataManager.data.settings.enableNoteReviewPaneOnStartup) {
-      this.uiManager.sidebarManager.redraw();
-    }
   }
   /**
    * Starts the periodic review-reminder loop once the plugin is fully initialized.
@@ -36984,7 +37105,7 @@ var SRPlugin = class _SRPlugin extends import_obsidian39.Plugin {
    * Running it earlier risks duplicate startup checks or reminders based on stale state.
    */
   startReviewReminders() {
-    if (!this.isInitialized || !this.dataManager.data.settings.enableReviewReminders) {
+    if (!this.plugin.isInitialized || !this.dataManager.data.settings.enableReviewReminders) {
       return;
     }
     if (this.dataManager.data.settings.reviewReminderCheckOnStartup) {
@@ -37022,7 +37143,7 @@ var SRPlugin = class _SRPlugin extends import_obsidian39.Plugin {
    * disruptive, and auto-opening review would compete with the user's current context.
    */
   async checkReviewReminders() {
-    if (!this.isInitialized || !this.isDataManagerLoaded() || !this.dataManager.isOsrCoreLoaded() || this.isReviewReminderChecking || !this.dataManager.data.settings.enableReviewReminders) {
+    if (!this.plugin.isInitialized || !this.plugin.isDataManagerLoaded() || !this.dataManager.isOsrCoreLoaded() || this.isReviewReminderChecking || !this.dataManager.data.settings.enableReviewReminders) {
       return;
     }
     if (this.uiManager.uiState !== 0 /* Closed */ || this.uiManager.isSRInFocus) {
@@ -37064,24 +37185,138 @@ var SRPlugin = class _SRPlugin extends import_obsidian39.Plugin {
     if (activeElement === null) {
       return false;
     }
-    if (activeElement instanceof HTMLTextAreaElement || activeElement instanceof HTMLInputElement) {
+    if (activeElement.instanceOf(HTMLTextAreaElement) || activeElement.instanceOf(HTMLInputElement)) {
       return true;
     }
-    if (activeElement instanceof HTMLElement) {
+    if (activeElement.instanceOf(HTMLElement)) {
       return activeElement.isContentEditable || activeElement.closest(".cm-editor, .markdown-source-view") !== null;
     }
     return false;
   }
-  static createDeckTreeIterator(settings) {
-    let cardOrder = RepItemOrder[settings.flashcardCardOrder];
-    if (cardOrder === void 0) cardOrder = 2 /* DueFirstSequential */;
-    let deckOrder = DeckOrder[settings.flashcardDeckOrder];
-    if (deckOrder === void 0) deckOrder = 0 /* PrevDeckComplete_Sequential */;
-    const iteratorOrder = {
-      deckOrder,
-      repItemOrder: cardOrder
-    };
-    return new DeckTreeIterator(iteratorOrder, null);
+};
+
+// src/main.ts
+var SRPlugin = class extends import_obsidian39.Plugin {
+  constructor() {
+    super(...arguments);
+    this._uiManager = null;
+    this._dataManager = null;
+    this._nextNoteReviewHandler = null;
+    this._commandManager = null;
+    this._reminderManager = null;
+    this.isInitialized = false;
+  }
+  async onload() {
+    try {
+      const pluginDataManager = new PluginDataManager(this);
+      await pluginDataManager.loadData();
+      const settingsManager = new SettingsManager(
+        pluginDataManager.pluginData.settings,
+        async (settings) => {
+          await pluginDataManager.writeSettings(settings);
+        }
+      );
+      this.dataManager = new DataManager(this, pluginDataManager, settingsManager);
+      const uiManager = new UIManager2(this, settingsManager);
+      this.uiManager = uiManager;
+      this.commandManager = new CommandManager(this, settingsManager, uiManager);
+      this.app.workspace.onLayoutReady(async () => {
+        this.dataManager.loadData();
+        if (settingsManager.settings.preferredLocale !== "-") {
+          LocaleManagerInstance.getInstance().currentLocale = settingsManager.settings.preferredLocale;
+        }
+        const noteReviewQueue = new NoteReviewQueue();
+        this._nextNoteReviewHandler = new NextNoteReviewHandler(
+          this.app,
+          settingsManager.settings,
+          noteReviewQueue
+        );
+        await this.dataManager.initOSRCore(noteReviewQueue, async () => {
+          await this.onOsrVaultDataChanged();
+        });
+        await this.uiManager.onLayoutReady();
+        this.commandManager.onLayoutReady();
+        this._reminderManager = new ReminderManager(this, this.uiManager, this.dataManager);
+        this.isInitialized = true;
+        this._reminderManager.restartReviewReminders();
+      });
+    } catch (error) {
+      if (error instanceof PluginDataError || error instanceof Error) {
+        console.warn("SRPlugin: Error in onLoad", error.message);
+        DebugLoggerInstance.getInstance().log(
+          "SRPlugin: Error in onLoad: " + error.message,
+          "error"
+        );
+      } else {
+        console.warn("SRPlugin: Error in onLoad");
+        DebugLoggerInstance.getInstance().log("SRPlugin: Error in onLoad", "error");
+      }
+    }
+  }
+  get reminderManager() {
+    if (this._reminderManager === null) throw new Error("Reminder manager not initialized!!!");
+    return this._reminderManager;
+  }
+  get uiManager() {
+    if (this._uiManager === null) throw new Error("UI manager not initialized!!!");
+    return this._uiManager;
+  }
+  set uiManager(uiManager) {
+    this._uiManager = uiManager;
+  }
+  get nextNoteReviewHandler() {
+    if (this._nextNoteReviewHandler === null)
+      throw new Error("Next note review handler not initialized!!!");
+    return this._nextNoteReviewHandler;
+  }
+  get commandManager() {
+    if (this._commandManager === null) throw new Error("Command manager not initialized!!!");
+    return this._commandManager;
+  }
+  set commandManager(commandManager) {
+    this._commandManager = commandManager;
+  }
+  isUiManagerLoaded() {
+    return this._uiManager !== null;
+  }
+  get dataManager() {
+    if (this._dataManager === null) throw new Error("Data manager not initialized!!!");
+    return this._dataManager;
+  }
+  set dataManager(dataManager) {
+    this._dataManager = dataManager;
+  }
+  isDataManagerLoaded() {
+    return this._dataManager !== null;
+  }
+  onunload() {
+    this.reminderManager.stopReviewReminders();
+    this.app.workspace.getLeavesOfType(REVIEW_QUEUE_VIEW_TYPE).forEach((leaf) => leaf.detach());
+    this.uiManager.destroy();
+    this.commandManager.onunload();
+  }
+  addCustomHotkeys() {
+    this.commandManager.addCustomHotkeys();
+  }
+  removeCustomHotkeys() {
+    this.commandManager.removeCustomHotkeys();
+  }
+  /**
+   * Gets the text direction setting for the current Obsidian instance.
+   */
+  getObsidianRtlSetting() {
+    return activeDocument.body.hasClass("mod-rtl") ? 2 /* Rtl */ : 1 /* Ltr */;
+  }
+  /**
+   * Called when the OSR app core's data has changed.
+   *
+   * Anything that needs to be updated in the UI because of this change should be done here.
+   */
+  async onOsrVaultDataChanged() {
+    await this.uiManager.updateStatusBar();
+    if (this.dataManager.data.settings.enableNoteReviewPaneOnStartup) {
+      this.uiManager.sidebarManager.redraw();
+    }
   }
 };
 /*! Bundled license information:

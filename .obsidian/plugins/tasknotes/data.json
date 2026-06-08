@@ -288,7 +288,7 @@
     }
   ],
   "recurrenceMigrated": false,
-  "lastSeenVersion": "4.10.0",
+  "lastSeenVersion": "4.10.2",
   "showReleaseNotesOnUpdate": true,
   "showTrackedTasksInStatusBar": false,
   "autoStopTimeTrackingOnComplete": true,
@@ -522,5 +522,85 @@
     "includeObsidianLink": true,
     "defaultReminderMinutes": null
   },
-  "enableDebugLogging": false
+  "enableDebugLogging": false,
+  "googleCalendarSyncQueue": [
+    {
+      "taskPath": "TaskNotes/Tasks/new task here.md",
+      "requestedAt": 1780466818391,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/new test 2.md",
+      "requestedAt": 1780467853228,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/new task.md",
+      "requestedAt": 1780921101363,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/new test 3.md",
+      "requestedAt": 1780485936606,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/test task.md",
+      "requestedAt": 1780921466506,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/Test.md",
+      "requestedAt": 1780920818931,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/test 2.md",
+      "requestedAt": 1780920859294,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/new task again.md",
+      "requestedAt": 1780921259885,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/htis new task.md",
+      "requestedAt": 1780921271211,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/new task 3.md",
+      "requestedAt": 1780921290636,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/teask 4.md",
+      "requestedAt": 1780921418969,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/my note.md",
+      "requestedAt": 1780921585449,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    }
+  ],
+  "pomodoroState": {
+    "isRunning": false,
+    "timeRemaining": 1500
+  },
+  "lastPomodoroDate": "2026-06-07",
+  "checkForUpdatesOnStartup": true
 }

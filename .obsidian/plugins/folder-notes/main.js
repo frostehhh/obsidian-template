@@ -7366,14 +7366,15 @@ var FolderNotesPlugin = class extends import_obsidian51.Plugin {
     }
   }
   onLayoutReady() {
-    var _a, _b;
+    var _a, _b, _c, _d;
     if (!this._loaded) {
       return;
     }
     registerFileExplorerObserver(this);
     const fileExplorer = getFileExplorer(this);
-    if (fileExplorer) {
-      fileExplorer.view.tree.infinityScroll.rootMargin = 1.5;
+    const infinityScroll = (_b = (_a = fileExplorer == null ? void 0 : fileExplorer.view) == null ? void 0 : _a.tree) == null ? void 0 : _b.infinityScroll;
+    if (infinityScroll) {
+      infinityScroll.rootMargin = 1.5;
     }
     this.registerView(FOLDER_OVERVIEW_VIEW, (leaf2) => {
       return new FolderOverviewView(leaf2, this);
@@ -7430,7 +7431,7 @@ var FolderNotesPlugin = class extends import_obsidian51.Plugin {
     }
     const viewWithEditModes = view;
     const activeEditor = this.app.workspace.activeEditor;
-    const editMode = (_b = (_a = viewWithEditModes.editMode) != null ? _a : viewWithEditModes.sourceMode) != null ? _b : activeEditor == null ? void 0 : activeEditor.editMode;
+    const editMode = (_d = (_c = viewWithEditModes.editMode) != null ? _c : viewWithEditModes.sourceMode) != null ? _d : activeEditor == null ? void 0 : activeEditor.editMode;
     if (!editMode) {
       return;
     }
@@ -7438,29 +7439,30 @@ var FolderNotesPlugin = class extends import_obsidian51.Plugin {
     const clipboardProto = Object.getPrototypeOf(clipboardManager);
     const originalHandleDragOver = clipboardProto.handleDragOver;
     const originalHandleDrop = clipboardProto.handleDrop;
-    clipboardProto.handleDragOver = (evt, ...args) => {
-      const { dragManager } = clipboardManager.app;
+    const folderNotePlugin = this;
+    clipboardProto.handleDragOver = function(evt, ...args) {
+      const { dragManager } = this.app;
       const draggable = dragManager == null ? void 0 : dragManager.draggable;
       if ((draggable == null ? void 0 : draggable.file) instanceof import_obsidian51.TFolder) {
-        const folderNote = getFolderNote(this, draggable.file.path);
+        const folderNote = getFolderNote(folderNotePlugin, draggable.file.path);
         if (folderNote) {
           dragManager.setAction(window.i18next.t("interface.drag-and-drop.insert-link-here"));
           return;
         }
       }
-      originalHandleDragOver(evt, ...args);
+      return originalHandleDragOver.call(this, evt, ...args);
     };
-    clipboardProto.handleDrop = (evt, ...args) => {
-      const { dragManager } = clipboardManager.app;
+    clipboardProto.handleDrop = function(evt, ...args) {
+      const { dragManager } = this.app;
       const draggable = dragManager == null ? void 0 : dragManager.draggable;
       if ((draggable == null ? void 0 : draggable.file) instanceof import_obsidian51.TFolder) {
-        const folderNote = getFolderNote(this, draggable.file.path);
+        const folderNote = getFolderNote(folderNotePlugin, draggable.file.path);
         if (folderNote) {
           draggable.file = folderNote;
           draggable.type = "file";
         }
       }
-      originalHandleDrop(evt, ...args);
+      return originalHandleDrop.call(this, evt, ...args);
     };
     if (this.settings.fvGlobalSettings.autoUpdateLinks) {
       this.fvIndexDB.init(false);
