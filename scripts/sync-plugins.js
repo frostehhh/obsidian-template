@@ -77,6 +77,26 @@ function cancel(msg = 'Cancelled.') {
   process.exit(0);
 }
 
+async function multiselectWithToggle({ message, options, initialValues = [], required = false }) {
+  while (true) {
+    const result = await p.multiselect({
+      message: `${message}  (a = toggle all)`,
+      options,
+      initialValues,
+      required: false,
+    });
+
+    if (p.isCancel(result)) return result;
+
+    if (required && result.length === 0) {
+      p.log.warn('Please select at least one item.');
+      continue;
+    }
+
+    return result;
+  }
+}
+
 async function main() {
   // Step 1: Load config
   let config = {};
@@ -105,7 +125,7 @@ async function main() {
   plugins.sort((a, b) => a.name.localeCompare(b.name));
 
   // Step 4: Plugin multiselect
-  const selectedPluginIds = await p.multiselect({
+  const selectedPluginIds = await multiselectWithToggle({
     message: 'Select plugins to sync',
     options: plugins.map((plugin) => ({
       value: plugin.id,
@@ -192,7 +212,7 @@ async function main() {
   }
 
   const selectedDirs = await p.multiselect({
-    message: 'Select content directories to sync',
+    message: 'Select content directories to sync  (a = toggle all)',
     options: DIR_OPTIONS.map((dir) => ({ value: dir, label: dir })),
     initialValues: config.defaultDirs ?? ['--Attachments--', '--Obsidian Template--', 'Bases', 'Notes'],
     required: false,
@@ -202,7 +222,7 @@ async function main() {
   const finalDirs = [...new Set([...(selectedDirs ?? []), ...autoDirs])];
 
   // Step 6c: Obsidian settings sync selection
-  const selectedSettings = await p.multiselect({
+  const selectedSettings = await multiselectWithToggle({
     message: 'Select Obsidian settings to sync',
     options: SETTINGS_ITEMS.map((item) => ({
       value: item,
@@ -210,7 +230,6 @@ async function main() {
       hint: item.endsWith('.json') ? 'file' : 'directory',
     })),
     initialValues: config.defaultSettings ?? [],
-    required: false,
   });
   if (p.isCancel(selectedSettings)) cancel();
 
