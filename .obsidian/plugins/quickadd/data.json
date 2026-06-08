@@ -82,19 +82,19 @@
     },
     {
       "id": "7836d84f-9429-403b-bca4-eae015d920b3",
-      "name": "TaskNotes - Create folder base",
+      "name": "TaskNotes - Create Tasks Default View for Folder",
       "type": "Macro",
       "command": false,
       "runOnStartup": false,
       "macro": {
-        "name": "TaskNotes - Create folder base",
+        "name": "TaskNotes - Create Tasks Default View for Folder",
         "id": "4177433a-02e3-439a-b422-454beffc77fb",
         "commands": [
           {
-            "name": "qa-taskNotes-createTasksDefaultForFolder",
+            "name": "qa-taskNotes-createTasksDefaultViewForFolder",
             "type": "UserScript",
-            "id": "13f561ac-74b2-40fd-a781-1ea80605dca6",
-            "path": "--Scripts--/QuickAdd/qa-taskNotes-createTasksDefaultForFolder.js",
+            "id": "74390785-e064-48d7-8ad5-a4d66a62f7c3",
+            "path": "--Scripts--/QuickAdd/qa-taskNotes-createTasksDefaultViewForFolder.js",
             "settings": {}
           }
         ]

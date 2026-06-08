@@ -10,7 +10,7 @@
   "taskPropertyValue": "",
   "excludedFolders": "--Attachments--, --Obsidian Template--, --Properties--, --Scripts--, Bases, Canvas, Dataviews, Excalibrain, Excalidraw",
   "defaultTaskPriority": "none",
-  "defaultTaskStatus": "open",
+  "defaultTaskStatus": "backlog",
   "taskOrgFiltersCollapsed": false,
   "taskFilenameFormat": "zettel",
   "storeTitleInFilename": true,
@@ -185,9 +185,9 @@
     },
     {
       "id": "open",
-      "value": "open",
-      "label": "Open",
-      "color": "#808080",
+      "value": "backlog",
+      "label": "Backlog",
+      "color": "#b68ee6",
       "isCompleted": false,
       "excludeFromCycle": false,
       "order": 1,
@@ -195,13 +195,25 @@
       "autoArchiveDelay": 5
     },
     {
-      "id": "in-progress",
-      "value": "in-progress",
-      "label": "In progress",
-      "color": "#0066cc",
+      "id": "status_1780485791878",
+      "value": "pending",
+      "label": "Pending",
+      "color": "#eb1f10",
+      "completed": false,
       "isCompleted": false,
       "excludeFromCycle": false,
       "order": 2,
+      "autoArchive": false,
+      "autoArchiveDelay": 5
+    },
+    {
+      "id": "in-progress",
+      "value": "in-progress",
+      "label": "In progress",
+      "color": "#ebeb10",
+      "isCompleted": false,
+      "excludeFromCycle": false,
+      "order": 3,
       "autoArchive": false,
       "autoArchiveDelay": 5
     },
@@ -212,7 +224,7 @@
       "color": "#00aa00",
       "isCompleted": true,
       "excludeFromCycle": false,
-      "order": 3,
+      "order": 4,
       "autoArchive": false,
       "autoArchiveDelay": 5
     }
