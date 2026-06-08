@@ -3,7 +3,7 @@ import { readdir, readFile, writeFile, mkdir, copyFile, stat } from 'fs/promises
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TEMPLATE_DIR = join(REPO_ROOT, 'template');
 const TEMPLATE_PLUGINS_DIR = join(TEMPLATE_DIR, '.obsidian', 'plugins');
 const TEMPLATE_OBSIDIAN_DIR = join(TEMPLATE_DIR, '.obsidian');
@@ -186,8 +186,8 @@ async function main() {
 
     const resolvedPath = resolve(manualPath.trim());
     if (!(await pathExists(join(resolvedPath, '.obsidian')))) {
-      p.cancel('No .obsidian folder found at that path. Is this an Obsidian vault?');
-      process.exit(1);
+      await mkdir(join(resolvedPath, '.obsidian', 'plugins'), { recursive: true });
+      p.log.info(`Initialized .obsidian/ in ${resolvedPath}`);
     }
     const vaultName = resolvedPath.split('/').at(-1);
     const pluginsDir = join(resolvedPath, '.obsidian', 'plugins');

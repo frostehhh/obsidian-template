@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "sync": "node scripts/sync.js"
+    "sync": "node scripts/sync/sync.js"
   },
   "dependencies": {
     "@clack/prompts": "^0.9.0"
