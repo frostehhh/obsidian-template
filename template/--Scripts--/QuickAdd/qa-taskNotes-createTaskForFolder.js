@@ -22,7 +22,10 @@ module.exports = async (params) => {
 
   const projectFilePath = folderPath ? `${folderPath}/${folderName}.md` : `${folderName}.md`;
   const projectFile = app.vault.getAbstractFileByPath(projectFilePath);
-  const projects = projectFile ? [`[[${folderName}]]`] : [];
+  const linkText = projectFile
+    ? app.metadataCache.fileToLinktext(projectFile, `${tasksFolder}/placeholder.md`)
+    : null;
+  const projects = linkText ? [`[[${linkText}]]`] : [];
 
   if (!app.vault.getAbstractFileByPath(tasksFolder)) {
     await app.vault.createFolder(tasksFolder);
