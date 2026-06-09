@@ -64,6 +64,34 @@ Key API surface:
 
 Full script API, error handling, and examples → [SCRIPTS.md](references/SCRIPTS.md)
 
+## Importing other .js files
+
+`require` and dynamic `import()` are not available in QuickAdd's script execution context. Use `vaultRequire` instead — it reads a vault file and evaluates it as a CommonJS module:
+
+```js
+const basePath = "--Scripts--/QuickAdd";
+
+async function vaultRequire(app, name) {
+  const relPath = name.endsWith(".js") ? name : `${name}.js`;
+  const src = await app.vault.adapter.read(`${basePath}/${relPath}`);
+  const mod = { exports: {} };
+  new Function("module", "exports", src)(mod, mod.exports);
+  return mod.exports;
+}
+
+module.exports = async (params) => {
+  const { app } = params;
+
+  const myLib = await vaultRequire(app, "lib/my-lib");
+  // ...
+};
+```
+
+- Paths are relative to `--Scripts--/QuickAdd/`
+- `.js` extension is optional
+- Lib files use standard `module.exports = ...` syntax — no changes needed
+- Modules are re-read from disk on every run (no caching)
+
 ## Workflow: adding a new choice
 
 1. Open `.obsidian/plugins/quickadd/data.json`

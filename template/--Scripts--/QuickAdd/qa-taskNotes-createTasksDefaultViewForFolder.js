@@ -1,9 +1,17 @@
-const path = require("path");
-const resolve = require(path.join(app.vault.adapter.basePath, "--Scripts--", "QuickAdd", "lib", "resolver"))(app);
-const tasksDefault = resolve("lib/TaskNotes/templates/tasks-default");
+const basePath = "--Scripts--/QuickAdd";
+
+async function vaultRequire(app, name) {
+  const relPath = name.endsWith(".js") ? name : `${name}.js`;
+  const src = await app.vault.adapter.read(`${basePath}/${relPath}`);
+  const mod = { exports: {} };
+  new Function("module", "exports", src)(mod, mod.exports);
+  return mod.exports;
+}
 
 module.exports = async (params) => {
   const { app } = params;
+
+  const tasksDefault = await vaultRequire(app, "lib/TaskNotes/templates/tasks-default");
 
   const file = app.workspace.getActiveFile();
   if (!file) {
