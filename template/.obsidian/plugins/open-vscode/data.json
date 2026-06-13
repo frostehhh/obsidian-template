@@ -2,7 +2,8 @@
   "ribbonIcon": true,
   "ribbonCommandUsesCode": true,
   "showFileContextMenuItem": true,
-  "executeTemplate": "cursor \"{{vaultpath}}\" \"{{vaultpath}}/{{filepath}}\"",
+  "executeTemplate": "code \"{{vaultpath}}\" \"{{vaultpath}}/{{filepath}}\"",
+  "urlProtocol": "vscode",
   "openFile": true,
   "workspacePath": "{{vaultpath}}",
   "useUrlInsiders": false
