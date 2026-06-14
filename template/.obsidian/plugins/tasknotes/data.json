@@ -10,7 +10,7 @@
   "taskPropertyValue": "",
   "excludedFolders": "--Attachments--, --Obsidian Template--, --Properties--, --Scripts--, Bases, Canvas, Dataviews, Excalibrain, Excalidraw",
   "defaultTaskPriority": "none",
-  "defaultTaskStatus": "backlog",
+  "defaultTaskStatus": "0-open/none",
   "taskOrgFiltersCollapsed": false,
   "taskFilenameFormat": "zettel",
   "storeTitleInFilename": true,
@@ -174,7 +174,7 @@
   "customStatuses": [
     {
       "id": "none",
-      "value": "none",
+      "value": "0-open/none",
       "label": "None",
       "color": "#cccccc",
       "isCompleted": false,
@@ -185,7 +185,7 @@
     },
     {
       "id": "open",
-      "value": "backlog",
+      "value": "0-open/backlog",
       "label": "Backlog",
       "color": "#b68ee6",
       "isCompleted": false,
@@ -193,11 +193,11 @@
       "order": 1,
       "autoArchive": false,
       "autoArchiveDelay": 5,
-      "nextStatus": "pending"
+      "nextStatus": "0-open/pending"
     },
     {
       "id": "status_1780485791878",
-      "value": "pending",
+      "value": "0-open/pending",
       "label": "Pending",
       "color": "#f26055",
       "completed": false,
@@ -206,11 +206,11 @@
       "order": 2,
       "autoArchive": false,
       "autoArchiveDelay": 5,
-      "nextStatus": "in-progress"
+      "nextStatus": "2-inProgress/in-progress"
     },
     {
       "id": "status_1780922159840",
-      "value": "blocked",
+      "value": "1-onHold/blocked",
       "label": "Blocked",
       "color": "#eb1f10",
       "completed": false,
@@ -219,11 +219,11 @@
       "order": 3,
       "autoArchive": false,
       "autoArchiveDelay": 5,
-      "nextStatus": "in-progress"
+      "nextStatus": "2-inProgress/in-progress"
     },
     {
       "id": "status_1780922066848",
-      "value": "on-hold",
+      "value": "1-onHold/on-hold",
       "label": "On hold",
       "color": "#ed861f",
       "completed": false,
@@ -232,11 +232,11 @@
       "order": 4,
       "autoArchive": false,
       "autoArchiveDelay": 5,
-      "nextStatus": "in-progress"
+      "nextStatus": "2-inProgress/in-progress"
     },
     {
       "id": "in-progress",
-      "value": "in-progress",
+      "value": "2-inProgress/in-progress",
       "label": "In progress",
       "color": "#ebeb10",
       "isCompleted": false,
@@ -247,7 +247,7 @@
     },
     {
       "id": "done",
-      "value": "done",
+      "value": "3-completed/done",
       "label": "Done",
       "color": "#00aa00",
       "isCompleted": true,
@@ -623,6 +623,24 @@
       "requestedAt": 1780921585449,
       "attempts": 0,
       "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/test-2.md",
+      "requestedAt": 1781013400794,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/test2.md",
+      "requestedAt": 1781013428407,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/test.md",
+      "requestedAt": 1781013491648,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
     }
   ],
   "pomodoroState": {
@@ -630,5 +648,6 @@
     "timeRemaining": 1500
   },
   "lastPomodoroDate": "2026-06-07",
-  "checkForUpdatesOnStartup": true
+  "checkForUpdatesOnStartup": true,
+  "lastNotifiedReleaseVersion": "4.11.0"
 }
