@@ -15,102 +15,33 @@ Return a string to expose it as `{{MACRO:macroName}}` output in the next templat
 
 ---
 
-## Importing modules with `require`
+## Importing other scripts
 
-QuickAdd scripts run in Obsidian's Node.js context, so `require` is available for three categories of imports.
-
-### Node.js built-ins
-
-Standard Node modules work without installation:
+`require` and dynamic `import()` are not available in QuickAdd's script execution context. Use `vaultRequire` instead — it reads a vault file and evaluates it as a CommonJS module:
 
 ```js
-const path = require("path");
-const fs   = require("fs");
-const os   = require("os");
+const basePath = "--Scripts--/QuickAdd";
 
-module.exports = async (params) => {
-  const vaultPath = params.app.vault.adapter.basePath;
-  const target    = path.join(vaultPath, "--Scripts--", "data.json");
-  const raw       = fs.readFileSync(target, "utf8");
-  const data      = JSON.parse(raw);
-};
-```
-
-Common built-ins: `path`, `fs`, `os`, `crypto`, `child_process`, `url`.
-
-> Prefer `app.vault` for reading/writing vault files — it keeps paths portable and triggers Obsidian's cache. Use `fs` only for files outside the vault or for synchronous reads where the vault API is inconvenient.
-
-### Obsidian API
-
-Import Obsidian's exported classes and utilities by requiring `"obsidian"`:
-
-```js
-const { Notice, moment, TFile, normalizePath } = require("obsidian");
+async function vaultRequire(app, name) {
+  const relPath = name.endsWith(".js") ? name : `${name}.js`;
+  const src = await app.vault.adapter.read(`${basePath}/${relPath}`);
+  const mod = { exports: {} };
+  new Function("module", "exports", src)(mod, mod.exports);
+  return mod.exports;
+}
 
 module.exports = async (params) => {
   const { app } = params;
 
-  new Notice("Hello from QuickAdd!");
-
-  const today = moment().format("YYYY-MM-DD");
-
-  const filePath = normalizePath("Notes/My Note.md");
-  const file = app.vault.getAbstractFileByPath(filePath);
-  if (file instanceof TFile) {
-    const content = await app.vault.read(file);
-  }
+  const myLib = await vaultRequire(app, "lib/my-lib");
+  // ...
 };
 ```
 
-Commonly used exports: `Notice`, `moment`, `TFile`, `TFolder`, `normalizePath`, `requestUrl`, `parseYaml`, `stringifyYaml`.
-
-### Other scripts in the vault
-
-Shared helper modules live in `--Scripts--/QuickAdd/lib/` by default. Require them by absolute path built from the vault's base path:
-
-```js
-const path = require("path");
-
-module.exports = async (params) => {
-  const { app } = params;
-  const lib  = path.join(app.vault.adapter.basePath, "--Scripts--", "QuickAdd", "lib");
-
-  const utils = require(path.join(lib, "utils.js"));
-  const result = utils.formatTitle("my note");
-};
-```
-
-A helper in `lib/` follows the same `module.exports` convention:
-
-```js
-// --Scripts--/QuickAdd/lib/utils.js
-module.exports = {
-  formatTitle(str) {
-    return str.replace(/\b\w/g, (c) => c.toUpperCase());
-  },
-};
-```
-
-To avoid repeating the base path in every script, load `resolver.js` once at the top to get a `resolve` function scoped to `--Scripts--/QuickAdd/`:
-
-```js
-const path    = require("path");
-const resolve = require(path.join(app.vault.adapter.basePath, "--Scripts--", "QuickAdd", "lib", "resolver"))(app);
-
-module.exports = async (params) => {
-  const utils  = resolve("lib/utils.js");
-  const helper = resolve("lib/helper.js");
-  const myScript = resolve("myScript.js");
-};
-```
-
-`app` is a global in Obsidian's renderer context, so `resolve` can be initialized at the top level alongside `path`. `resolver.js` lives at `--Scripts--/QuickAdd/lib/resolver.js` and resolves all paths from the `--Scripts--/QuickAdd/` root — prefix `lib/` for modules in the lib directory.
-
-> Node caches `require` results. If you edit a script and re-run the macro in the same Obsidian session, you may get the stale version. **Restarting Obsidian** is the simplest fix. To clear a single module without restarting:
-> ```js
-> const modPath = path.join(app.vault.adapter.basePath, "--Scripts--", "QuickAdd", "lib", "utils.js");
-> const utils = require(modPath);
-> ```
+- Paths are relative to `--Scripts--/QuickAdd/`
+- `.js` extension is optional
+- Lib files use standard `module.exports = ...` syntax — no changes needed
+- Modules are re-read from disk on every run (no caching)
 
 ---
 
