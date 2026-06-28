@@ -19,6 +19,7 @@
     "defaultContexts": "",
     "defaultTags": "",
     "defaultProjects": "",
+    "useParentNoteForTaskCreation": false,
     "useParentNoteAsProject": false,
     "useParentHeaderAsProject": false,
     "inheritParentTaskProperties": false,
@@ -30,6 +31,8 @@
     "defaultScheduledTime": "none",
     "bodyTemplate": "",
     "useBodyTemplate": false,
+    "occurrenceBodyTemplate": "",
+    "useOccurrenceBodyTemplate": false,
     "defaultReminders": []
   },
   "openTaskAfterCreation": "none",
@@ -316,7 +319,7 @@
     }
   ],
   "recurrenceMigrated": false,
-  "lastSeenVersion": "4.10.2",
+  "lastSeenVersion": "4.11.1",
   "showReleaseNotesOnUpdate": true,
   "showTrackedTasksInStatusBar": false,
   "autoStopTimeTrackingOnComplete": true,
@@ -343,7 +346,8 @@
     "excludeCompletedFromExport": false,
     "requireDueDateForExport": false,
     "requireScheduledDateForExport": false,
-    "useICSEndAsDue": false
+    "useICSEndAsDue": false,
+    "recurringEventRelatedNotesMode": "series"
   },
   "savedViews": [],
   "enableNotifications": true,
@@ -647,7 +651,8 @@
     "isRunning": false,
     "timeRemaining": 1500
   },
-  "lastPomodoroDate": "2026-06-07",
+  "lastPomodoroDate": "2026-06-27",
   "checkForUpdatesOnStartup": true,
-  "lastNotifiedReleaseVersion": "4.11.0"
+  "lastNotifiedReleaseVersion": "4.11.1",
+  "starterNoteCreated": false
 }

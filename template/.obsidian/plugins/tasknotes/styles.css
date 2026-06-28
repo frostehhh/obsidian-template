@@ -3973,13 +3973,6 @@ body.is-mobile .tasknotes-plugin .task-card__context-menu svg {
         height: 16px;
     }
 
-    /* Larger status dots for touch */
-    body:not(.is-mobile) .tasknotes-plugin .task-card__status-dot {
-        width: 36px;
-        height: 36px;
-    }
-
-    body:not(.is-mobile) .tasknotes-plugin .task-card__priority-dot,
     body:not(.is-mobile) .tasknotes-plugin .task-card__recurring-indicator,
     body:not(.is-mobile) .tasknotes-plugin .task-card__reminder-indicator,
     body:not(.is-mobile) .tasknotes-plugin .task-card__details-indicator,
@@ -10255,7 +10248,8 @@ body.is-mobile .tasknotes-plugin .reminder-modal__action-btn svg {
     margin-top: var(--size-4-2);
 }
 
-.tasknotes-plugin .absolute-fields {
+.tasknotes-plugin .relative-fields.reminder-modal__fields--hidden,
+.tasknotes-plugin .absolute-fields.reminder-modal__fields--hidden {
     display: none;
 }
 
@@ -14643,6 +14637,7 @@ body.is-mobile .timeblock-attachment-remove {
     border-bottom: 1px solid var(--background-modifier-border-hover);
     background: var(--background-primary);
     color: var(--text-normal);
+    overflow: visible;
 }
 
 .advanced-calendar-view .fc-timegrid-slot {
@@ -15184,15 +15179,15 @@ body.is-mobile .advanced-calendar-view.advanced-calendar-view--list .fc-scroller
         display: none;
     }
 
-    .advanced-calendar-view .fc-timegrid-event.fc-task-event,
-    .advanced-calendar-view .fc-timegrid-event.fc-ics-event,
-    .advanced-calendar-view .fc-timegrid-event[data-event-type="property-based"] {
+    body.is-mobile .advanced-calendar-view .fc-timegrid-event.fc-task-event,
+    body.is-mobile .advanced-calendar-view .fc-timegrid-event.fc-ics-event,
+    body.is-mobile .advanced-calendar-view .fc-timegrid-event[data-event-type="property-based"] {
         background-color: var(--fc-event-border-color);
     }
 
-    .advanced-calendar-view .fc-timegrid-event.fc-task-event .fc-event-main,
-    .advanced-calendar-view .fc-timegrid-event.fc-ics-event .fc-event-main,
-    .advanced-calendar-view .fc-timegrid-event[data-event-type="property-based"] .fc-event-main {
+    body.is-mobile .advanced-calendar-view .fc-timegrid-event.fc-task-event .fc-event-main,
+    body.is-mobile .advanced-calendar-view .fc-timegrid-event.fc-ics-event .fc-event-main,
+    body.is-mobile .advanced-calendar-view .fc-timegrid-event[data-event-type="property-based"] .fc-event-main {
         color: var(--text-on-accent);
     }
 }
@@ -16243,6 +16238,32 @@ body.is-mobile .tasknotes-plugin .kanban-view__swimlane-column {
 
 .tasknotes-plugin .kanban-view__card-wrapper--shift-down {
     transform: translateY(var(--tn-drag-gap, 60px));
+}
+
+.tasknotes-plugin .kanban-view__card-wrapper--drop-marker::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: calc(-1 * var(--tn-drag-gap, 60px) + var(--tn-spacing-xs));
+    height: max(32px, calc(var(--tn-drag-gap, 60px) - (var(--tn-spacing-xs) * 2)));
+    box-sizing: border-box;
+    border: 2px dashed var(--tn-interactive-accent);
+    border-radius: var(--tn-radius-md);
+    background: color-mix(in srgb, var(--tn-interactive-accent) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tn-interactive-accent) 20%, transparent);
+    pointer-events: none;
+}
+
+.tasknotes-plugin .kanban-view__cards--drop-marker-end::after,
+.tasknotes-plugin .kanban-view__tasks-container.kanban-view__cards--drop-marker-end::after {
+    content: "";
+    display: block;
+    height: max(32px, calc(var(--tn-drag-gap, 60px) - (var(--tn-spacing-xs) * 2)));
+    box-sizing: border-box;
+    border: 2px dashed var(--tn-interactive-accent);
+    border-radius: var(--tn-radius-md);
+    background: color-mix(in srgb, var(--tn-interactive-accent) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tn-interactive-accent) 20%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
