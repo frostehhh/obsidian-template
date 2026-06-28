@@ -1,17 +1,27 @@
+const SCRIPTS_PATH = "--Scripts--/QuickAdd";
+
+async function vaultRequire(app, name) {
+  const relPath = name.endsWith(".js") ? name : `${name}.js`;
+  const src = await app.vault.adapter.read(`${SCRIPTS_PATH}/${relPath}`);
+  const mod = { exports: {} };
+  new Function("module", "exports", src)(mod, mod.exports);
+  return mod.exports;
+}
+
 module.exports = async (params) => {
   const { app } = params;
+  const { getActiveFile, getFolderContext, openFile } = await vaultRequire(app, "lib/utils");
 
-  const file = app.workspace.getActiveFile();
+  const file = getActiveFile(app);
   if (!file) {
     new Notice("No active file.");
     return;
   }
 
-  const folderPath = file.parent.path === "/" ? "" : file.parent.path;
-  const folderName = file.parent.name;
-  const basePath = folderPath ? `${folderPath}/_${folderName}.base` : `${folderName}.base`;
+  const { folderPath, folderName } = getFolderContext(file);
+  const baseFilePath = folderPath ? `${folderPath}/_${folderName}.base` : `${folderName}.base`;
 
-  if (app.vault.getAbstractFileByPath(basePath)) {
+  if (app.vault.getAbstractFileByPath(baseFilePath)) {
     new Notice(`"${folderName}.base" already exists.`);
     return;
   }
@@ -23,8 +33,7 @@ module.exports = async (params) => {
     - file.inFolder(this.file.folder)
 `;
 
-  const newFile = await app.vault.create(basePath, content);
+  const newFile = await app.vault.create(baseFilePath, content);
   new Notice(`Created "${folderName}.base" in "${folderPath || "/"}"`);
-  const leaf = app.workspace.getLeaf(false);
-  await leaf.openFile(newFile);
+  await openFile(app, newFile);
 };

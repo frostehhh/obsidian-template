@@ -1,8 +1,8 @@
-const basePath = "--Scripts--/QuickAdd";
+const SCRIPTS_PATH = "--Scripts--/QuickAdd";
 
 async function vaultRequire(app, name) {
   const relPath = name.endsWith(".js") ? name : `${name}.js`;
-  const src = await app.vault.adapter.read(`${basePath}/${relPath}`);
+  const src = await app.vault.adapter.read(`${SCRIPTS_PATH}/${relPath}`);
   const mod = { exports: {} };
   new Function("module", "exports", src)(mod, mod.exports);
   return mod.exports;
@@ -10,19 +10,18 @@ async function vaultRequire(app, name) {
 
 module.exports = async (params) => {
   const { app } = params;
-
+  const { getActiveFile, getFolderContext, openFile } = await vaultRequire(app, "lib/utils");
   const tasksDefault = await vaultRequire(app, "lib/TaskNotes/templates/tasks-default");
 
-  const file = app.workspace.getActiveFile();
+  const file = getActiveFile(app);
   if (!file) {
     new Notice("No active file.");
     return;
   }
 
-  const folderPath = file.parent.path === "/" ? "" : file.parent.path;
-  const folderName = file.parent.name;
+  const { folderPath, folderName } = getFolderContext(file);
   const notePath = folderPath ? `${folderPath}/${folderName}` : folderName;
-  const basePath = folderPath ? `${folderPath}/Tasks.base` : `Tasks.base`;
+  const tasksBasePath = folderPath ? `${folderPath}/Tasks.base` : "Tasks.base";
 
   if (!app.vault.getAbstractFileByPath(`${notePath}.md`)) {
     const api = app.plugins.plugins.tasknotes?.api;
@@ -37,15 +36,14 @@ module.exports = async (params) => {
     new Notice(`Created task note "${notePath}".`);
   }
 
-  if (app.vault.getAbstractFileByPath(basePath)) {
+  if (app.vault.getAbstractFileByPath(tasksBasePath)) {
     new Notice(`"Tasks.base" already exists.`);
     return;
   }
 
   const content = tasksDefault([`projects.contains(link("${notePath}"))`]);
 
-  const newFile = await app.vault.create(basePath, content);
+  const newFile = await app.vault.create(tasksBasePath, content);
   new Notice(`Created "Tasks.base" in "${folderPath || "/"}"`);
-  const leaf = app.workspace.getLeaf(false);
-  await leaf.openFile(newFile);
+  await openFile(app, newFile);
 };

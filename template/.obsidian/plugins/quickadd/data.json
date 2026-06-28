@@ -42,12 +42,12 @@
     },
     {
       "id": "d136e547-a540-4227-9099-b2912131d5fc",
-      "name": "Create folder base",
+      "name": "Folder - Create folder base",
       "type": "Macro",
       "command": false,
       "runOnStartup": false,
       "macro": {
-        "name": "Create folder base",
+        "name": "Folder - Create folder base",
         "id": "ff7a4a56-6495-4d4d-b5f4-0e27d95c8b55",
         "commands": [
           {
@@ -55,6 +55,26 @@
             "type": "UserScript",
             "id": "20706b04-caac-4ddb-b9e6-f32a596d09a8",
             "path": "--Scripts--/QuickAdd/qa-createBaseForFolder.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
+      "id": "96a3e95f-2dd0-4102-8f8f-7a7430262dc8",
+      "name": "Folder - Create folder child note",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "Folder - Create folder child note",
+        "id": "85e03f20-79c4-42a8-96c6-2061a71d5f3c",
+        "commands": [
+          {
+            "name": "qa-folderCreateFolderChildNote",
+            "type": "UserScript",
+            "id": "582eeeb9-fd37-496d-b3cc-9feda827b238",
+            "path": "--Scripts--/QuickAdd/qa-folderCreateFolderChildNote.js",
             "settings": {}
           }
         ]

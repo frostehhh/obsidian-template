@@ -1,14 +1,24 @@
+const SCRIPTS_PATH = "--Scripts--/QuickAdd";
+
+async function vaultRequire(app, name) {
+  const relPath = name.endsWith(".js") ? name : `${name}.js`;
+  const src = await app.vault.adapter.read(`${SCRIPTS_PATH}/${relPath}`);
+  const mod = { exports: {} };
+  new Function("module", "exports", src)(mod, mod.exports);
+  return mod.exports;
+}
+
 module.exports = async (params) => {
   const { app, quickAddApi } = params;
+  const { getActiveFile, getFolderContext, openFile, ensureFolder } = await vaultRequire(app, "lib/utils");
 
-  const file = app.workspace.getActiveFile();
+  const file = getActiveFile(app);
   if (!file) {
     new Notice("No active file.");
     return;
   }
 
-  const folderPath = file.parent.path === "/" ? "" : file.parent.path;
-  const folderName = file.parent.name;
+  const { folderPath, folderName } = getFolderContext(file);
   const tasksFolder = folderPath ? `${folderPath}/Tasks` : "Tasks";
 
   const taskTitle = await quickAddApi.inputPrompt("Task title");
@@ -27,9 +37,7 @@ module.exports = async (params) => {
     : null;
   const projects = linkText ? [`[[${linkText}]]`] : [];
 
-  if (!app.vault.getAbstractFileByPath(tasksFolder)) {
-    await app.vault.createFolder(tasksFolder);
-  }
+  await ensureFolder(app, tasksFolder);
 
   const task = await api.tasks.create({ title: taskTitle, projects });
   await api.tasks.move(task.path, tasksFolder);
@@ -42,8 +50,7 @@ module.exports = async (params) => {
         fm.projects = projects;
       });
     }
-    const leaf = app.workspace.getLeaf(false);
-    await leaf.openFile(movedFile);
+    await openFile(app, movedFile);
   }
 
   new Notice(`Created task "${taskTitle}" in "${tasksFolder}"`);
