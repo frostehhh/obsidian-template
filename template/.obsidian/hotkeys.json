@@ -15,5 +15,14 @@
       ],
       "key": "F"
     }
+  ],
+  "editor:toggle-checklist-status": [],
+  "quickadd:runQuickAdd": [
+    {
+      "modifiers": [
+        "Mod"
+      ],
+      "key": "L"
+    }
   ]
 }
