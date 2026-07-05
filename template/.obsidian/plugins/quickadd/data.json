@@ -119,6 +119,26 @@
           }
         ]
       }
+    },
+    {
+      "id": "f6f38569-a1bc-4031-9863-6604d9ec317d",
+      "name": "Create note",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "Create note",
+        "id": "d7fe3cef-ba01-4145-a2a1-45f61263f819",
+        "commands": [
+          {
+            "name": "qa-createNote",
+            "type": "UserScript",
+            "id": "3622b7cd-38a2-4145-9d87-a0c5bc02d6ca",
+            "path": "--Scripts--/QuickAdd/qa-createNote.js",
+            "settings": {}
+          }
+        ]
+      }
     }
   ],
   "inputPrompt": "single-line",
