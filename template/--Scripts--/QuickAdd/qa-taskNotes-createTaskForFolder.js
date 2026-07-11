@@ -11,6 +11,7 @@ async function vaultRequire(app, name) {
 module.exports = async (params) => {
   const { app, quickAddApi } = params;
   const { getActiveFile, getFolderContext, openFile, ensureFolder } = await vaultRequire(app, "lib/utils");
+  const { getProjects } = await vaultRequire(app, "lib/TaskNotes/helpers");
 
   const file = getActiveFile(app);
   if (!file) {
@@ -31,11 +32,7 @@ module.exports = async (params) => {
   }
 
   const projectFilePath = folderPath ? `${folderPath}/${folderName}.md` : `${folderName}.md`;
-  const projectFile = app.vault.getAbstractFileByPath(projectFilePath);
-  const linkText = projectFile
-    ? app.metadataCache.fileToLinktext(projectFile, `${tasksFolder}/placeholder.md`)
-    : null;
-  const projects = linkText ? [`[[${linkText}]]`] : [];
+  const projects = getProjects(app, projectFilePath, tasksFolder);
 
   await ensureFolder(app, tasksFolder);
 
