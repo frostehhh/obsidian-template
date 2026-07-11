@@ -27,7 +27,7 @@ async function readTemplateContent(app, templates) {
 }
 
 async function createNoteFromPresets(app, quickAddApi, presets, options = {}) {
-  const { ensureFolder, openFile } = await vaultRequire(app, "lib/utils");
+  const { ensureFolder, createAndOpenFile } = await vaultRequire(app, "lib/utils");
 
   let chosen;
   if (presets.length === 1) {
@@ -63,14 +63,7 @@ async function createNoteFromPresets(app, quickAddApi, presets, options = {}) {
   await ensureFolder(app, chosen.path);
 
   const notePath = `${chosen.path}/${fileName}.md`;
-  if (app.vault.getAbstractFileByPath(notePath)) {
-    new Notice(`"${fileName}.md" already exists.`);
-    return;
-  }
-
-  const newFile = await app.vault.create(notePath, content);
-  new Notice(`Created "${fileName}" in "${chosen.path}"`);
-  await openFile(app, newFile);
+  await createAndOpenFile(app, notePath, content, { label: fileName, folder: chosen.path });
 }
 
 module.exports = { createNoteFromPresets };

@@ -10,7 +10,7 @@ async function vaultRequire(app, name) {
 
 module.exports = async (params) => {
   const { app } = params;
-  const { getActiveFile, getFolderContext, openFile } = await vaultRequire(app, "lib/utils");
+  const { getActiveFile, getFolderContext, createAndOpenFile } = await vaultRequire(app, "lib/utils");
   const tasksDefault = await vaultRequire(app, "lib/TaskNotes/templates/tasks-default");
 
   const file = getActiveFile(app);
@@ -36,14 +36,10 @@ module.exports = async (params) => {
     new Notice(`Created task note "${notePath}".`);
   }
 
-  if (app.vault.getAbstractFileByPath(tasksBasePath)) {
-    new Notice(`"Tasks.base" already exists.`);
-    return;
-  }
-
   const content = tasksDefault([`projects.contains(link("${notePath}"))`]);
 
-  const newFile = await app.vault.create(tasksBasePath, content);
-  new Notice(`Created "Tasks.base" in "${folderPath || "/"}"`);
-  await openFile(app, newFile);
+  await createAndOpenFile(app, tasksBasePath, content, {
+    label: "Tasks.base",
+    folder: folderPath || "/",
+  });
 };

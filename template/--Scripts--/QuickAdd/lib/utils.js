@@ -20,4 +20,16 @@ async function ensureFolder(app, folderPath) {
   }
 }
 
-module.exports = { getActiveFile, getFolderContext, openFile, ensureFolder };
+async function createAndOpenFile(app, path, content, { label, folder }) {
+  if (app.vault.getAbstractFileByPath(path)) {
+    const basename = path.split("/").pop();
+    new Notice(`"${basename}" already exists.`);
+    return null;
+  }
+  const newFile = await app.vault.create(path, content);
+  new Notice(`Created "${label}" in "${folder}"`);
+  await openFile(app, newFile);
+  return newFile;
+}
+
+module.exports = { getActiveFile, getFolderContext, openFile, ensureFolder, createAndOpenFile };
