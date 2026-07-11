@@ -11,7 +11,7 @@ async function vaultRequire(app, name) {
 module.exports = async (params) => {
   const { app, quickAddApi } = params;
   const { getActiveFile, getFolderContext, openFile, ensureFolder } = await vaultRequire(app, "lib/utils");
-  const { getProjects } = await vaultRequire(app, "lib/TaskNotes/helpers");
+  const { getProjects, createTaskInFolder } = await vaultRequire(app, "lib/TaskNotes/helpers");
 
   const file = getActiveFile(app);
   if (!file) {
@@ -36,19 +36,8 @@ module.exports = async (params) => {
 
   await ensureFolder(app, tasksFolder);
 
-  const task = await api.tasks.create({ title: taskTitle, projects });
-  await api.tasks.move(task.path, tasksFolder);
-
-  const movedPath = `${tasksFolder}/${task.path.split("/").pop()}`;
-  const movedFile = app.vault.getAbstractFileByPath(movedPath);
+  const movedFile = await createTaskInFolder(app, api, { title: taskTitle, projects, folder: tasksFolder });
   if (movedFile) {
-    if (projects.length) {
-      await app.fileManager.processFrontMatter(movedFile, (fm) => {
-        fm.projects = projects;
-      });
-    }
     await openFile(app, movedFile);
   }
-
-  new Notice(`Created task "${taskTitle}" in "${tasksFolder}"`);
 };

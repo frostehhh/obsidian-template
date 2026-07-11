@@ -10,4 +10,20 @@ function getProjects(app, projectFilePaths, fromFolder) {
   return links;
 }
 
-module.exports = { getProjects };
+async function createTaskInFolder(app, api, { title, projects, folder, noun = "task" }) {
+  const task = await api.tasks.create({ title, projects });
+  await api.tasks.move(task.path, folder);
+
+  const movedPath = `${folder}/${task.path.split("/").pop()}`;
+  const movedFile = app.vault.getAbstractFileByPath(movedPath);
+  if (movedFile && projects.length) {
+    await app.fileManager.processFrontMatter(movedFile, (fm) => {
+      fm.projects = projects;
+    });
+  }
+
+  new Notice(`Created ${noun} "${title}" in "${folder}"`);
+  return movedFile;
+}
+
+module.exports = { getProjects, createTaskInFolder };
