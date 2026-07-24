@@ -11,6 +11,7 @@ async function vaultRequire(app, name) {
 module.exports = async (params) => {
   const { app, quickAddApi } = params;
   const { getActiveFile, getFolderContext, openFile, ensureFolder } = await vaultRequire(app, "lib/utils");
+  const { getParentPropertyKey } = await vaultRequire(app, "lib/excalibrain");
 
   const file = getActiveFile(app);
   if (!file) {
@@ -33,6 +34,13 @@ module.exports = async (params) => {
   }
 
   const newFile = await app.vault.create(notePath, "");
+
+  const parentLinkText = app.metadataCache.fileToLinktext(file, notePath);
+  const parentKey = await getParentPropertyKey(app);
+  await app.fileManager.processFrontMatter(newFile, (fm) => {
+    fm[parentKey] = `[[${parentLinkText}]]`;
+  });
+
   new Notice(`Created "${title}" in "${notesFolder}"`);
   await openFile(app, newFile);
 };

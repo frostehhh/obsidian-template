@@ -31,6 +31,12 @@ module.exports = async (params) => {
     - file.name != "_note_" + this.file.folder
     - file.name != this.file.name
     - file.inFolder(this.file.folder)
+views:
+  - type: table
+    name: Table
+    order:
+      - file.name
+      - file.tags
 `;
 
   const newFile = await app.vault.create(baseFilePath, content);
