@@ -7,7 +7,7 @@ function getParentPropertyKey(app) {
   if (!plugin) return "Parent";
 
   const parents = plugin.settings?.hierarchy?.parents ?? [];
-  return parents.includes("Parent:") ? "Parent:" : "Parent";
+  return parents.includes("Parent") ? "Parent:" : "Parent";
 }
 
 module.exports = { getPlugin, getParentPropertyKey };
