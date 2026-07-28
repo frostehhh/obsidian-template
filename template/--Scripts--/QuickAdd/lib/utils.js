@@ -14,6 +14,11 @@ async function openFile(app, file) {
   await leaf.openFile(file);
 }
 
+async function openFileInNewTab(app, file) {
+  const leaf = app.workspace.getLeaf("tab");
+  await leaf.openFile(file);
+}
+
 async function ensureFolder(app, folderPath) {
   if (!app.vault.getAbstractFileByPath(folderPath)) {
     await app.vault.createFolder(folderPath);
@@ -32,4 +37,26 @@ async function createAndOpenFile(app, path, content, { label, folder }) {
   return newFile;
 }
 
-module.exports = { getActiveFile, getFolderContext, openFile, ensureFolder, createAndOpenFile };
+async function createOrOpenFile(app, path, content, { label, folder }) {
+  const existingFile = app.vault.getAbstractFileByPath(path);
+  if (existingFile) {
+    const basename = path.split("/").pop();
+    await openFileInNewTab(app, existingFile);
+    new Notice(`Opened "${basename}" in a new tab.`);
+    return existingFile;
+  }
+  const newFile = await app.vault.create(path, content);
+  new Notice(`Created "${label}" in "${folder}"`);
+  await openFile(app, newFile);
+  return newFile;
+}
+
+module.exports = {
+  getActiveFile,
+  getFolderContext,
+  openFile,
+  openFileInNewTab,
+  ensureFolder,
+  createAndOpenFile,
+  createOrOpenFile,
+};

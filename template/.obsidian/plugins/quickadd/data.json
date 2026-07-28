@@ -22,19 +22,19 @@
     },
     {
       "id": "7836d84f-9429-403b-bca4-eae015d920b3",
-      "name": "TaskNotes - Create Tasks Default View for Folder",
+      "name": "TaskNotes - Create or Open Tasks Default View for Folder",
       "type": "Macro",
       "command": false,
       "runOnStartup": false,
       "macro": {
-        "name": "TaskNotes - Create Tasks Default View for Folder",
+        "name": "TaskNotes - Create or Open Tasks Default View for Folder",
         "id": "4177433a-02e3-439a-b422-454beffc77fb",
         "commands": [
           {
-            "name": "qa-taskNotes-createTasksDefaultViewForFolder",
+            "name": "qa-taskNotes-createOrOpenTasksDefaultViewForFolder",
             "type": "UserScript",
             "id": "74390785-e064-48d7-8ad5-a4d66a62f7c3",
-            "path": "--Scripts--/QuickAdd/qa-taskNotes-createTasksDefaultViewForFolder.js",
+            "path": "--Scripts--/QuickAdd/qa-taskNotes-createOrOpenTasksDefaultViewForFolder.js",
             "settings": {}
           }
         ]
@@ -42,19 +42,19 @@
     },
     {
       "id": "d136e547-a540-4227-9099-b2912131d5fc",
-      "name": "Folder - Create folder base",
+      "name": "Folder - Create or Open folder base",
       "type": "Macro",
       "command": false,
       "runOnStartup": false,
       "macro": {
-        "name": "Folder - Create folder base",
+        "name": "Folder - Create or Open folder base",
         "id": "ff7a4a56-6495-4d4d-b5f4-0e27d95c8b55",
         "commands": [
           {
-            "name": "qa-createBaseForFolder",
+            "name": "qa-createOrOpenBaseForFolder",
             "type": "UserScript",
             "id": "20706b04-caac-4ddb-b9e6-f32a596d09a8",
-            "path": "--Scripts--/QuickAdd/qa-createBaseForFolder.js",
+            "path": "--Scripts--/QuickAdd/qa-createOrOpenBaseForFolder.js",
             "settings": {}
           }
         ]

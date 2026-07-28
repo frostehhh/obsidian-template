@@ -72,8 +72,8 @@ See https://quickadd.obsidian.guide/docs/ for information on the relevant plugin
 | Script | Description |
 |---|---|
 | `qa-taskNotes-createTaskForFolder.js` | Create a task in the current folder's `Tasks/` subfolder, auto-linking the folder's note as a project |
-| `qa-taskNotes-createTasksDefaultViewForFolder.js` | Scaffold a default task view Base for the current folder |
-| `qa-createBaseForFolder.js` | Create a generic Base view for the current folder |
+| `qa-taskNotes-createOrOpenTasksDefaultViewForFolder.js` | Scaffold a default task view Base for the current folder, or open it if it already exists |
+| `qa-createOrOpenBaseForFolder.js` | Create a generic Base view for the current folder, or open it if it already exists |
 | `qa-wrapFileInFolder.js` | Wrap the active file into a new folder of the same name |
 
 ## Claude Code Integration

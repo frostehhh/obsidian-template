@@ -10,7 +10,7 @@ async function vaultRequire(app, name) {
 
 module.exports = async (params) => {
   const { app } = params;
-  const { getActiveFile, getFolderContext, createAndOpenFile } = await vaultRequire(app, "lib/utils");
+  const { getActiveFile, getFolderContext, createOrOpenFile } = await vaultRequire(app, "lib/utils");
   const tasksDefault = await vaultRequire(app, "lib/TaskNotes/templates/tasks-default");
 
   const file = getActiveFile(app);
@@ -38,7 +38,7 @@ module.exports = async (params) => {
 
   const content = tasksDefault([`projects.contains(link("${notePath}"))`]);
 
-  await createAndOpenFile(app, tasksBasePath, content, {
+  await createOrOpenFile(app, tasksBasePath, content, {
     label: "Tasks.base",
     folder: folderPath || "/",
   });

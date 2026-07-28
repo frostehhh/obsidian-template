@@ -10,7 +10,7 @@ async function vaultRequire(app, name) {
 
 module.exports = async (params) => {
   const { app } = params;
-  const { getActiveFile, getFolderContext, openFile } = await vaultRequire(app, "lib/utils");
+  const { getActiveFile, getFolderContext, createOrOpenFile } = await vaultRequire(app, "lib/utils");
 
   const file = getActiveFile(app);
   if (!file) {
@@ -21,16 +21,11 @@ module.exports = async (params) => {
   const { folderPath, folderName } = getFolderContext(file);
   const baseFilePath = folderPath ? `${folderPath}/_${folderName}.base` : `${folderName}.base`;
 
-  if (app.vault.getAbstractFileByPath(baseFilePath)) {
-    new Notice(`"${folderName}.base" already exists.`);
-    return;
-  }
-
   const content = `filters:
   and:
     - file.name != "_note_" + this.file.folder
     - file.name != this.file.name
-    - file.inFolder(this.file.folder + "/Notes")
+    - file.inFolder(this.file.folder)
 views:
   - type: table
     name: Table
@@ -39,7 +34,8 @@ views:
       - file.tags
 `;
 
-  const newFile = await app.vault.create(baseFilePath, content);
-  new Notice(`Created "${folderName}.base" in "${folderPath || "/"}"`);
-  await openFile(app, newFile);
+  await createOrOpenFile(app, baseFilePath, content, {
+    label: `${folderName}.base`,
+    folder: folderPath || "/",
+  });
 };
