@@ -30,7 +30,7 @@ module.exports = async (params) => {
   and:
     - file.name != "_note_" + this.file.folder
     - file.name != this.file.name
-    - file.inFolder(this.file.folder)
+    - file.inFolder(this.file.folder + "/Notes")
 views:
   - type: table
     name: Table
