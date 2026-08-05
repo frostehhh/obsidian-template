@@ -11,6 +11,7 @@ async function vaultRequire(app, name) {
 module.exports = async (params) => {
   const { app } = params;
   const { getActiveFile, getFolderContext, createOrOpenFile } = await vaultRequire(app, "lib/utils");
+  const { getTaskNotesApi } = await vaultRequire(app, "lib/TaskNotes/helpers");
   const tasksDefault = await vaultRequire(app, "lib/TaskNotes/templates/tasks-default");
 
   const file = getActiveFile(app);
@@ -24,11 +25,8 @@ module.exports = async (params) => {
   const tasksBasePath = folderPath ? `${folderPath}/Tasks.base` : "Tasks.base";
 
   if (!app.vault.getAbstractFileByPath(`${notePath}.md`)) {
-    const api = app.plugins.plugins.tasknotes?.api;
-    if (!api) {
-      new Notice("TaskNotes plugin is not available.");
-      return;
-    }
+    const api = getTaskNotesApi(app);
+    if (!api) return;
     const task = await api.tasks.create({ title: folderName });
     if (task.path !== `${notePath}.md`) {
       await app.vault.rename(app.vault.getAbstractFileByPath(task.path), `${notePath}.md`);
