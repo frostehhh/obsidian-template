@@ -17,9 +17,16 @@ function getTaskNotesApi(app) {
   return api;
 }
 
-function getProjectLinks(app, projectFilePath, fromFolder) {
-  const projectFile = app.vault.getAbstractFileByPath(projectFilePath);
-  if (!projectFile) return [];
+async function getProjectLinks(app, api, projectFilePath, fromFolder) {
+  let projectFile = app.vault.getAbstractFileByPath(projectFilePath);
+  if (!projectFile) {
+    const projectName = projectFilePath.split("/").pop().replace(/\.md$/, "");
+    const task = await api.tasks.create({ title: projectName });
+    if (task.path !== projectFilePath) {
+      await app.vault.rename(app.vault.getAbstractFileByPath(task.path), projectFilePath);
+    }
+    projectFile = app.vault.getAbstractFileByPath(projectFilePath);
+  }
   const linkText = app.metadataCache.fileToLinktext(projectFile, `${fromFolder}/placeholder.md`);
   return [`[[${linkText}]]`];
 }
@@ -35,7 +42,7 @@ async function createTaskInFolder(app, file, { title, noun = "task" }) {
 
   await ensureFolder(app, folder);
 
-  const projects = getProjectLinks(app, projectFilePath, folder);
+  const projects = await getProjectLinks(app, api, projectFilePath, folder);
   const task = await api.tasks.create({ title, projects });
   await api.tasks.move(task.path, folder);
 
