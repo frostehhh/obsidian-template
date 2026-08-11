@@ -28,7 +28,7 @@ module.exports = async (params) => {
 
   const content = `filters:
   and:
-    - '!list(note["${parentKey}"]).filter(value.asFile().folder == this.file.folder && ("/" + this.file.folder).endsWith("/" + value.asFile().basename)).isEmpty()'
+    - 'if(note["${parentKey}"], !list(note["${parentKey}"]).filter(value.asFile().folder == this.file.folder && ("/" + this.file.folder).endsWith("/" + value.asFile().basename)).isEmpty(), false)'
 views:
   - type: table
     name: Table
