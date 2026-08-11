@@ -17,16 +17,21 @@ function getTaskNotesApi(app) {
   return api;
 }
 
-async function getProjectLinks(app, api, projectFilePath, fromFolder) {
-  let projectFile = app.vault.getAbstractFileByPath(projectFilePath);
-  if (!projectFile) {
-    const projectName = projectFilePath.split("/").pop().replace(/\.md$/, "");
-    const task = await api.tasks.create({ title: projectName });
-    if (task.path !== projectFilePath) {
-      await app.vault.rename(app.vault.getAbstractFileByPath(task.path), projectFilePath);
+async function ensureFolderTaskNote(app, api, folderPath, folderName) {
+  const notePath = folderPath ? `${folderPath}/${folderName}.md` : `${folderName}.md`;
+  let file = app.vault.getAbstractFileByPath(notePath);
+  if (!file) {
+    const task = await api.tasks.create({ title: folderName });
+    if (task.path !== notePath) {
+      await app.vault.rename(app.vault.getAbstractFileByPath(task.path), notePath);
     }
-    projectFile = app.vault.getAbstractFileByPath(projectFilePath);
+    file = app.vault.getAbstractFileByPath(notePath);
   }
+  return file;
+}
+
+async function getProjectLinks(app, api, folderPath, folderName, fromFolder) {
+  const projectFile = await ensureFolderTaskNote(app, api, folderPath, folderName);
   const linkText = app.metadataCache.fileToLinktext(projectFile, `${fromFolder}/placeholder.md`);
   return [`[[${linkText}]]`];
 }
@@ -38,11 +43,10 @@ async function createTaskInFolder(app, file, { title, noun = "task" }) {
   const { getFolderContext, ensureFolder } = await vaultRequire(app, "lib/utils");
   const { folderPath, folderName } = getFolderContext(file);
   const folder = folderPath ? `${folderPath}/Tasks` : "Tasks";
-  const projectFilePath = folderPath ? `${folderPath}/${folderName}.md` : `${folderName}.md`;
 
   await ensureFolder(app, folder);
 
-  const projects = await getProjectLinks(app, api, projectFilePath, folder);
+  const projects = await getProjectLinks(app, api, folderPath, folderName, folder);
   const task = await api.tasks.create({ title, projects });
   await api.tasks.move(task.path, folder);
 
@@ -58,4 +62,4 @@ async function createTaskInFolder(app, file, { title, noun = "task" }) {
   return movedFile;
 }
 
-module.exports = { getTaskNotesApi, createTaskInFolder };
+module.exports = { getTaskNotesApi, createTaskInFolder, ensureFolderTaskNote };

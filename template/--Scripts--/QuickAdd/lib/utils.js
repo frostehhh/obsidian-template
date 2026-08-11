@@ -25,6 +25,15 @@ async function ensureFolder(app, folderPath) {
   }
 }
 
+async function ensureFolderNote(app, folderPath, folderName) {
+  const notePath = folderPath ? `${folderPath}/${folderName}.md` : `${folderName}.md`;
+  let file = app.vault.getAbstractFileByPath(notePath);
+  if (!file) {
+    file = await app.vault.create(notePath, "");
+  }
+  return file;
+}
+
 async function createAndOpenFile(app, path, content, { label, folder }) {
   if (app.vault.getAbstractFileByPath(path)) {
     const basename = path.split("/").pop();
@@ -57,6 +66,7 @@ module.exports = {
   openFile,
   openFileInNewTab,
   ensureFolder,
+  ensureFolderNote,
   createAndOpenFile,
   createOrOpenFile,
 };

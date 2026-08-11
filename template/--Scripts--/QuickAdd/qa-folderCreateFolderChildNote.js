@@ -10,7 +10,7 @@ async function vaultRequire(app, name) {
 
 module.exports = async (params) => {
   const { app, quickAddApi } = params;
-  const { getActiveFile, getFolderContext, openFile, ensureFolder } = await vaultRequire(app, "lib/utils");
+  const { getActiveFile, getFolderContext, openFile, ensureFolder, ensureFolderNote } = await vaultRequire(app, "lib/utils");
   const { getParentPropertyKey } = await vaultRequire(app, "lib/excalibrain");
 
   const file = getActiveFile(app);
@@ -19,8 +19,9 @@ module.exports = async (params) => {
     return;
   }
 
-  const { folderPath } = getFolderContext(file);
+  const { folderPath, folderName } = getFolderContext(file);
   const notesFolder = folderPath ? `${folderPath}/Notes` : "Notes";
+  const folderNoteFile = await ensureFolderNote(app, folderPath, folderName);
 
   const title = await quickAddApi.inputPrompt("Note title");
   if (!title) return;
@@ -35,7 +36,7 @@ module.exports = async (params) => {
 
   const newFile = await app.vault.create(notePath, "");
 
-  const parentLinkText = app.metadataCache.fileToLinktext(file, notePath);
+  const parentLinkText = app.metadataCache.fileToLinktext(folderNoteFile, notePath);
   const parentKey = await getParentPropertyKey(app);
   await app.fileManager.processFrontMatter(newFile, (fm) => {
     fm[parentKey] = `[[${parentLinkText}]]`;

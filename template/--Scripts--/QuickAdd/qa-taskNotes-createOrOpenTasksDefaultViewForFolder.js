@@ -11,7 +11,7 @@ async function vaultRequire(app, name) {
 module.exports = async (params) => {
   const { app } = params;
   const { getActiveFile, getFolderContext, createOrOpenFile } = await vaultRequire(app, "lib/utils");
-  const { getTaskNotesApi } = await vaultRequire(app, "lib/TaskNotes/helpers");
+  const { getTaskNotesApi, ensureFolderTaskNote } = await vaultRequire(app, "lib/TaskNotes/helpers");
   const tasksDefault = await vaultRequire(app, "lib/TaskNotes/templates/tasks-default");
 
   const file = getActiveFile(app);
@@ -22,22 +22,17 @@ module.exports = async (params) => {
 
   const { folderPath, folderName } = getFolderContext(file);
   const notePath = folderPath ? `${folderPath}/${folderName}` : folderName;
-  const tasksBasePath = folderPath ? `${folderPath}/Tasks.base` : "Tasks.base";
+  const tasksBaseName = `Tasks - ${folderName}.base`;
+  const tasksBasePath = folderPath ? `${folderPath}/${tasksBaseName}` : tasksBaseName;
 
-  if (!app.vault.getAbstractFileByPath(`${notePath}.md`)) {
-    const api = getTaskNotesApi(app);
-    if (!api) return;
-    const task = await api.tasks.create({ title: folderName });
-    if (task.path !== `${notePath}.md`) {
-      await app.vault.rename(app.vault.getAbstractFileByPath(task.path), `${notePath}.md`);
-    }
-    new Notice(`Created task note "${notePath}".`);
-  }
+  const api = getTaskNotesApi(app);
+  if (!api) return;
+  await ensureFolderTaskNote(app, api, folderPath, folderName);
 
   const content = tasksDefault([`projects.contains(link("${notePath}"))`]);
 
   await createOrOpenFile(app, tasksBasePath, content, {
-    label: "Tasks.base",
+    label: tasksBaseName,
     folder: folderPath || "/",
   });
 };

@@ -10,7 +10,7 @@ async function vaultRequire(app, name) {
 
 module.exports = async (params) => {
   const { app } = params;
-  const { getActiveFile, getFolderContext, createOrOpenFile } = await vaultRequire(app, "lib/utils");
+  const { getActiveFile, getFolderContext, ensureFolderNote, createOrOpenFile } = await vaultRequire(app, "lib/utils");
 
   const file = getActiveFile(app);
   if (!file) {
@@ -19,7 +19,10 @@ module.exports = async (params) => {
   }
 
   const { folderPath, folderName } = getFolderContext(file);
-  const baseFilePath = folderPath ? `${folderPath}/_${folderName}.base` : `${folderName}.base`;
+  await ensureFolderNote(app, folderPath, folderName);
+
+  const notesBaseName = `Notes - ${folderName}.base`;
+  const baseFilePath = folderPath ? `${folderPath}/${notesBaseName}` : notesBaseName;
 
   const content = `filters:
   and:
@@ -35,7 +38,7 @@ views:
 `;
 
   await createOrOpenFile(app, baseFilePath, content, {
-    label: `${folderName}.base`,
+    label: notesBaseName,
     folder: folderPath || "/",
   });
 };
