@@ -11,6 +11,7 @@ async function vaultRequire(app, name) {
 module.exports = async (params) => {
   const { app } = params;
   const { getActiveFile, getFolderContext, ensureFolderNote, createOrOpenFile } = await vaultRequire(app, "lib/utils");
+  const { getParentPropertyKey } = await vaultRequire(app, "lib/excalibrain");
 
   const file = getActiveFile(app);
   if (!file) {
@@ -21,6 +22,7 @@ module.exports = async (params) => {
   const { folderPath, folderName } = getFolderContext(file);
   await ensureFolderNote(app, folderPath, folderName);
 
+  const parentKey = await getParentPropertyKey(app);
   const notesBaseName = `Notes - ${folderName}.base`;
   const baseFilePath = folderPath ? `${folderPath}/${notesBaseName}` : notesBaseName;
 
@@ -28,7 +30,8 @@ module.exports = async (params) => {
   and:
     - file.name != "_note_" + this.file.folder
     - file.name != this.file.name
-    - file.inFolder(this.file.folder + "/Notes")
+    - note["${parentKey}"].asFile().folder == this.file.folder
+    - ("/" + note["${parentKey}"].asFile().folder).endsWith("/" + note["${parentKey}"].asFile().basename)
 views:
   - type: table
     name: Table
