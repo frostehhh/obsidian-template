@@ -8,22 +8,32 @@ async function vaultRequire(app, name) {
   return mod.exports;
 }
 
-function extractFrontmatterBody(raw) {
-  const match = raw.match(/^---\n([\s\S]*?)\n---\s*\n?/);
-  return match ? match[1] : raw.trim();
+function splitTemplate(raw) {
+  const match = raw.match(/^---\n([\s\S]*?)\n---[ \t]*\r?\n?([\s\S]*)$/);
+  if (!match) {
+    return { frontmatter: "", body: raw.trim() };
+  }
+  return { frontmatter: match[1], body: match[2] };
 }
 
 async function readTemplateContent(app, templates) {
   const paths = Array.isArray(templates) ? templates : [templates];
+  const frontmatters = [];
   const bodies = [];
   for (const path of paths) {
     if (!app.vault.getAbstractFileByPath(path)) {
       throw new Error(`Template not found: "${path}".`);
     }
     const raw = await app.vault.adapter.read(path);
-    bodies.push(extractFrontmatterBody(raw));
+    const { frontmatter, body } = splitTemplate(raw);
+    if (frontmatter) frontmatters.push(frontmatter);
+    if (body.trim()) bodies.push(body.trim());
   }
-  return `---\n${bodies.join("\n")}\n---\n`;
+
+  const parts = [];
+  if (frontmatters.length) parts.push(`---\n${frontmatters.join("\n")}\n---\n`);
+  if (bodies.length) parts.push(bodies.join("\n\n"));
+  return parts.join("\n");
 }
 
 async function createNoteFromPresets(app, quickAddApi, presets, options = {}) {
