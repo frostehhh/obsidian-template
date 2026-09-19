@@ -72,7 +72,7 @@
   "nodeTitleScript": "",
   "backgroundColor": "#0c3e6aff",
   "excludeFilepaths": [],
-  "autoOpenCentralDocument": false,
+  "autoOpenCentralDocument": true,
   "toggleEmbedTogglesAutoOpen": true,
   "showInferredNodes": true,
   "showAttachments": true,
@@ -240,7 +240,7 @@
   "maxZoom": 1,
   "allowAutofocuOnSearch": true,
   "defaultAlwaysOnTop": false,
-  "embedCentralNode": true,
+  "embedCentralNode": false,
   "centerEmbedWidth": 550,
   "centerEmbedHeight": 700
 }

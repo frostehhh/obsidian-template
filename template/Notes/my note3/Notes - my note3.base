@@ -1,0 +1,9 @@
+filters:
+  and:
+    - if(note["Parent:"], !list(note["Parent:"]).filter(value.asFile().folder == this.file.folder && ("/" + this.file.folder).endsWith("/" + value.asFile().basename)).isEmpty(), false)
+views:
+  - type: table
+    name: Table
+    order:
+      - file.name
+      - file.tags

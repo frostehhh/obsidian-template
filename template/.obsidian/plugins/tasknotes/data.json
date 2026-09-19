@@ -624,7 +624,7 @@
     },
     {
       "taskPath": "TaskNotes/Tasks/my note.md",
-      "requestedAt": 1780921585449,
+      "requestedAt": 1786430676280,
       "attempts": 0,
       "lastError": "Google Calendar sync is not ready"
     },
@@ -645,6 +645,18 @@
       "requestedAt": 1781013491648,
       "attempts": 0,
       "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/test note.md",
+      "requestedAt": 1786430773385,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
+    },
+    {
+      "taskPath": "TaskNotes/Tasks/test new.md",
+      "requestedAt": 1786432406957,
+      "attempts": 0,
+      "lastError": "Google Calendar sync is not ready"
     }
   ],
   "pomodoroState": {
@@ -653,6 +665,6 @@
   },
   "lastPomodoroDate": "2026-06-27",
   "checkForUpdatesOnStartup": true,
-  "lastNotifiedReleaseVersion": "4.11.1",
+  "lastNotifiedReleaseVersion": "4.12.3",
   "starterNoteCreated": false
 }
