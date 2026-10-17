@@ -7,7 +7,7 @@ import {
   TEMPLATE_PLUGINS_DIR,
   TEMPLATE_OBSIDIAN_DIR,
   pathExists,
-} from '../lib/cli.js';
+} from '../lib/cli.ts';
 
 // Usage: state [--check]
 // Refreshes the plugin list in state.json from template/.obsidian/plugins and reports template
@@ -25,7 +25,7 @@ async function scanPlugins() {
   return plugins;
 }
 
-async function entriesOf(dir) {
+async function entriesOf(dir: string) {
   return (await readdir(dir, { withFileTypes: true })).filter((e) => !e.name.startsWith('.'));
 }
 

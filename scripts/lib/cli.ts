@@ -4,6 +4,7 @@ import { readdir, readFile, mkdir, copyFile, stat } from 'fs/promises';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
+import type { ItemKind, ItemResult, PluginInfo, State, Status, SyncConfig, Vault, VaultReport } from './types.ts';
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const TEMPLATE_DIR = join(REPO_ROOT, 'template');
@@ -14,14 +15,14 @@ export const CONFIG_PATH = join(REPO_ROOT, 'sync.config.json');
 
 // What the template contains and which parts can be synced lives in state.json (refresh with `mise run state`).
 export const STATE_PATH = join(REPO_ROOT, 'state.json');
-export const STATE = JSON.parse(readFileSync(STATE_PATH, 'utf8'));
+export const STATE: State = JSON.parse(readFileSync(STATE_PATH, 'utf8'));
 
 export const DATA_FILES = new Set(STATE.dataFiles);
 export const PLUGIN_DIR_CONDITIONS = STATE.dirs.pluginLinked.map(({ plugin, dir }) => ({ pluginId: plugin, dir }));
 export const DIR_OPTIONS = STATE.dirs.selectable;
 export const SETTINGS_ITEMS = STATE.settings.syncable.map((s) => s.name);
 
-export async function pathExists(target) {
+export async function pathExists(target: string): Promise<boolean> {
   try {
     await stat(target);
     return true;
@@ -30,7 +31,7 @@ export async function pathExists(target) {
   }
 }
 
-export async function copyRecursive(src, dest) {
+export async function copyRecursive(src: string, dest: string): Promise<void> {
   const entries = await readdir(src, { withFileTypes: true });
   await mkdir(dest, { recursive: true });
   for (const entry of entries) {
@@ -44,7 +45,7 @@ export async function copyRecursive(src, dest) {
   }
 }
 
-export async function copyAny(src, dest) {
+export async function copyAny(src: string, dest: string): Promise<void> {
   const info = await stat(src);
   if (info.isDirectory()) {
     await copyRecursive(src, dest);
@@ -54,12 +55,22 @@ export async function copyAny(src, dest) {
   }
 }
 
-export function cancel(msg = 'Cancelled.') {
+export function cancel(msg = 'Cancelled.'): never {
   p.cancel(msg);
   process.exit(0);
 }
 
-export async function multiselectWithToggle({ message, options, initialValues = [], required = false }) {
+export async function multiselectWithToggle({
+  message,
+  options,
+  initialValues = [],
+  required = false,
+}: {
+  message: string;
+  options: { value: string; label: string; hint?: string }[];
+  initialValues?: string[];
+  required?: boolean;
+}): Promise<string[] | symbol> {
   while (true) {
     const result = await p.multiselect({
       message: `${message}  (a = toggle all)`,
@@ -79,7 +90,7 @@ export async function multiselectWithToggle({ message, options, initialValues = 
   }
 }
 
-export async function loadConfig() {
+export async function loadConfig(): Promise<SyncConfig> {
   try {
     return JSON.parse(await readFile(CONFIG_PATH, 'utf8'));
   } catch {
@@ -89,8 +100,8 @@ export async function loadConfig() {
 }
 
 // Plugins listed in state.json, with name and version read live from each manifest.
-export async function discoverPlugins() {
-  const plugins = [];
+export async function discoverPlugins(): Promise<PluginInfo[]> {
+  const plugins: PluginInfo[] = [];
   for (const { id } of STATE.plugins) {
     try {
       const manifest = JSON.parse(await readFile(join(TEMPLATE_PLUGINS_DIR, id, 'manifest.json'), 'utf8'));
@@ -102,7 +113,7 @@ export async function discoverPlugins() {
   return plugins.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function makeVault(name, root) {
+export function makeVault(name: string, root: string): Vault {
   return {
     name,
     root,
@@ -111,9 +122,9 @@ export function makeVault(name, root) {
   };
 }
 
-export async function discoverVaults() {
+export async function discoverVaults(): Promise<Vault[]> {
   const siblings = await readdir(OBSIDIAN_ROOT, { withFileTypes: true });
-  const vaults = [];
+  const vaults: Vault[] = [];
   for (const entry of siblings) {
     if (!entry.isDirectory()) continue;
     if (entry.name.startsWith('.')) continue;
@@ -130,7 +141,15 @@ const MANUAL_SENTINEL = '__manual__';
 
 // Prompts for target vaults. Returns the selected vault objects.
 // With createMissing, a manually entered path without .obsidian/ is initialised (sync); otherwise it must exist (compare).
-export async function selectVaults({ vaults, defaults = [], createMissing = false }) {
+export async function selectVaults({
+  vaults,
+  defaults = [],
+  createMissing = false,
+}: {
+  vaults: Vault[];
+  defaults?: string[];
+  createMissing?: boolean;
+}): Promise<Vault[]> {
   const selectedNames = await p.multiselect({
     message: 'Select target vaults',
     options: [
@@ -162,7 +181,7 @@ export async function selectVaults({ vaults, defaults = [], createMissing = fals
       await mkdir(join(resolvedPath, '.obsidian', 'plugins'), { recursive: true });
       p.log.info(`Initialized .obsidian/ in ${resolvedPath}`);
     }
-    const vaultName = resolvedPath.split('/').at(-1);
+    const vaultName = resolvedPath.split('/').at(-1) ?? resolvedPath;
     all.push(makeVault(vaultName, resolvedPath));
     selectedNames.splice(selectedNames.indexOf(MANUAL_SENTINEL), 1, vaultName);
   }
@@ -171,7 +190,7 @@ export async function selectVaults({ vaults, defaults = [], createMissing = fals
 }
 
 // Template version: derived from the git tag, falling back to package.json outside a checkout.
-export async function getTemplateVersion() {
+export async function getTemplateVersion(): Promise<string> {
   try {
     return execFileSync('git', ['describe', '--tags', '--always', '--dirty'], {
       cwd: REPO_ROOT,
@@ -187,7 +206,7 @@ export async function getTemplateVersion() {
   }
 }
 
-export function describeResult(r) {
+export function describeResult(r: ItemResult): string {
   const { differs, missing, extra } = r.files;
   const parts = [];
   if (r.kind === 'plugin' && r.vaultVersion && r.templateVersion && r.vaultVersion !== r.templateVersion) {
@@ -201,28 +220,33 @@ export function describeResult(r) {
   return parts.join(', ');
 }
 
-const KIND_LABELS = { plugin: 'plugins', dir: 'dirs', setting: 'settings' };
+const KIND_LABELS: Record<ItemKind, string> = { plugin: 'plugins', dir: 'dirs', setting: 'settings' };
 
 // Plain-text report for one vault. With verbose, lists the files behind each non-matching status.
-export function renderReport(vault, templateVersion, results, { verbose = false } = {}) {
+export function renderReport(
+  vault: Vault,
+  templateVersion: string,
+  results: ItemResult[],
+  { verbose = false }: { verbose?: boolean } = {}
+): string {
   const lines = [`vault: ${vault.name}   (template ${templateVersion})`];
   const width = Math.max(...results.map((r) => r.label.length), 10);
-  for (const kind of Object.keys(KIND_LABELS)) {
+  for (const kind of Object.keys(KIND_LABELS) as ItemKind[]) {
     const group = results.filter((r) => r.kind === kind);
     group.forEach((r, i) => {
       const heading = i === 0 ? KIND_LABELS[kind] : '';
       const detail = describeResult(r);
       lines.push(`  ${heading.padEnd(9)} ${r.label.padEnd(width)}  ${r.status}${detail ? `   (${detail})` : ''}`);
       if (verbose && r.status !== 'not synced') {
-        for (const status of ['differs', 'missing', 'extra']) {
+        for (const status of ['differs', 'missing', 'extra'] as const) {
           for (const file of r.files[status]) lines.push(`${' '.repeat(13)}${status}: ${file || r.id}`);
         }
       }
     });
   }
-  const counts = {};
+  const counts: Partial<Record<Status, number>> = {};
   for (const r of results) counts[r.status] = (counts[r.status] ?? 0) + 1;
-  const summary = ['in sync', 'outdated', 'partial', 'not synced']
+  const summary = (['in sync', 'outdated', 'partial', 'not synced'] as const)
     .filter((s) => counts[s])
     .map((s) => `${counts[s]} ${s}`)
     .join(', ');
@@ -230,27 +254,30 @@ export function renderReport(vault, templateVersion, results, { verbose = false 
   return lines.join('\n');
 }
 
-function findResult(results, kind, id) {
+function findResult(results: ItemResult[], kind: ItemKind, id: string): ItemResult | undefined {
   return results.find((r) => r.kind === kind && r.id.toLowerCase() === id.toLowerCase());
 }
 
 // One-line comparison hint for a wizard option, aggregated over the selected vaults.
 // reports: [{ vault, results }]
-export function statusHint(reports, kind, id) {
-  const found = reports.map(({ results }) => findResult(results, kind, id)).filter(Boolean);
-  if (found.length === 0) return '';
+export function statusHint(reports: VaultReport[], kind: ItemKind, id: string): string {
+  const found = reports
+    .map(({ results }) => findResult(results, kind, id))
+    .filter((r): r is ItemResult => r !== undefined);
+  const first = found[0];
+  if (!first) return '';
   if (found.length === 1) {
-    const detail = describeResult(found[0]);
-    return `${found[0].status}${detail ? ` (${detail})` : ''}`;
+    const detail = describeResult(first);
+    return `${first.status}${detail ? ` (${detail})` : ''}`;
   }
   const inSync = found.filter((r) => r.status === 'in sync').length;
   if (inSync === found.length) return 'in sync';
-  if (found.every((r) => r.status === found[0].status)) return found[0].status;
+  if (found.every((r) => r.status === first.status)) return first.status;
   return `in sync in ${inSync}/${found.length} vaults`;
 }
 
-function wrapList(prefix, names, width = 76) {
-  const lines = [];
+function wrapList(prefix: string, names: string[], width = 76): string {
+  const lines: string[] = [];
   let line = prefix;
   names.forEach((name, i) => {
     const piece = i === names.length - 1 ? name : `${name},`;
@@ -265,7 +292,7 @@ function wrapList(prefix, names, width = 76) {
 }
 
 // "Currently in sync" lines per vault, for the sync wizard.
-export function renderInSyncNote(reports) {
+export function renderInSyncNote(reports: VaultReport[]): string {
   return reports
     .map(({ vault, results }) => {
       const inSync = results.filter((r) => r.status === 'in sync');

@@ -4,10 +4,10 @@ Obsidian template vault (`template/`) plus the tooling around it (`scripts/`). O
 
 ## Language
 
-- **Prefer TypeScript** for new code and when substantially rewriting existing scripts. Existing `.js` files under `scripts/` stay as they are until they are touched.
-- Node runs `.ts` files directly (type stripping, Node 22.18+), so there is no build step: `node scripts/foo/foo.ts`. Import siblings with their real extension (`./lib/cli.ts`; existing JS files are imported as `./lib/cli.js`).
+- **Prefer TypeScript** for new code. Everything under `scripts/` is TypeScript; shared types live in `scripts/lib/types.ts`.
+- Node runs `.ts` files directly (type stripping, Node 22.18+), so there is no build step: `node scripts/foo/foo.ts`. Import siblings with their real `.ts` extension (`../lib/cli.ts`), and use `import type` for type-only imports.
 - Keep to erasable syntax only (no `enum`, `namespace` or constructor parameter properties); `tsconfig.json` enforces this.
-- `mise run typecheck` runs `tsc --noEmit`. `tsconfig.json` is strict and covers `scripts/` (JS is allowed but not type-checked).
+- `mise run typecheck` runs `tsc --noEmit`. `tsconfig.json` is strict (including unused locals/parameters and `noUncheckedIndexedAccess`) and covers `scripts/`.
 - QuickAdd scripts and anything else inside `template/` run inside Obsidian and stay JavaScript.
 
 ## Tasks

@@ -1,18 +1,18 @@
 [tasks.release]
 description = "Cut a template release: mise run release <patch|minor|major|x.y.z> [--dry-run]"
-run = "node scripts/release/release.js"
+run = "node scripts/release/release.ts"
 
 [tasks.sync]
 description = "Sync plugins, directories and settings from template/ into other vaults"
-run = "node scripts/sync/sync.js"
+run = "node scripts/sync/sync.ts"
 
 [tasks.compare]
 description = "Compare template/ with a vault: mise run compare [vault] [--verbose] [--json] [--check]"
-run = "node scripts/compare/compare.js"
+run = "node scripts/compare/compare.ts"
 
 [tasks.state]
 description = "Refresh state.json from template/ (add --check to only verify)"
-run = "node scripts/state/state.js"
+run = "node scripts/state/state.ts"
 
 [tasks.typecheck]
 description = "Type-check the repo scripts with tsc"

@@ -11,14 +11,15 @@ import {
   SETTINGS_ITEMS,
   pathExists,
   discoverPlugins,
-} from './cli.js';
+} from './cli.ts';
+import type { Item, ItemResult, Status, TreeComparison, Vault } from './types.ts';
 
 // Statuses, ordered from best to worst for display.
-export const STATUSES = ['in sync', 'outdated', 'partial', 'not synced'];
+export const STATUSES: Status[] = ['in sync', 'outdated', 'partial', 'not synced'];
 
-async function listFiles(root) {
-  const files = [];
-  async function walk(dir) {
+async function listFiles(root: string): Promise<string[]> {
+  const files: string[] = [];
+  async function walk(dir: string): Promise<void> {
     const entries = await readdir(dir, { withFileTypes: true });
     for (const entry of entries) {
       const full = join(dir, entry.name);
@@ -32,14 +33,18 @@ async function listFiles(root) {
   return files;
 }
 
-async function hashFile(file) {
+async function hashFile(file: string): Promise<string> {
   return createHash('sha1').update(await readFile(file)).digest('hex');
 }
 
 // Compares a template path (file or directory) with its counterpart in a vault.
 // skip(relPath) excludes files from the comparison, like sync does for plugin data.json.
-async function compareTrees(srcRoot, destRoot, skip = () => false) {
-  const result = { match: [], differs: [], missing: [], extra: [] };
+async function compareTrees(
+  srcRoot: string,
+  destRoot: string,
+  skip: (rel: string) => boolean = () => false
+): Promise<TreeComparison> {
+  const result = { match: [] as string[], differs: [] as string[], missing: [] as string[], extra: [] as string[] };
   const srcFiles = (await listFiles(srcRoot)).filter((f) => !skip(f));
   const destExists = await pathExists(destRoot);
   const destFiles = destExists ? (await listFiles(destRoot)).filter((f) => !skip(f)) : [];
@@ -58,7 +63,7 @@ async function compareTrees(srcRoot, destRoot, skip = () => false) {
   return { ...result, destExists };
 }
 
-function statusOf(files) {
+function statusOf(files: TreeComparison): Status {
   const { match, differs, missing, destExists } = files;
   if (!destExists || (match.length === 0 && differs.length === 0 && missing.length > 0)) return 'not synced';
   if (differs.length > 0) return 'outdated';
@@ -66,7 +71,7 @@ function statusOf(files) {
   return 'in sync';
 }
 
-async function readVersion(manifestPath) {
+async function readVersion(manifestPath: string): Promise<string | null> {
   try {
     return JSON.parse(await readFile(manifestPath, 'utf8')).version ?? null;
   } catch {
@@ -75,8 +80,8 @@ async function readVersion(manifestPath) {
 }
 
 // Every item sync can copy: { kind: 'plugin' | 'dir' | 'setting', id, label }.
-export async function listItems() {
-  const items = [];
+export async function listItems(): Promise<Item[]> {
+  const items: Item[] = [];
   for (const plugin of await discoverPlugins()) {
     items.push({ kind: 'plugin', id: plugin.id, label: plugin.name });
   }
@@ -97,9 +102,9 @@ export async function listItems() {
   return items;
 }
 
-export async function compareItem(vault, item) {
-  let files;
-  let extra = {};
+export async function compareItem(vault: Vault, item: Item): Promise<ItemResult> {
+  let files: TreeComparison;
+  let extra: { templateVersion?: string | null; vaultVersion?: string | null } = {};
   if (item.kind === 'plugin') {
     const src = join(TEMPLATE_PLUGINS_DIR, item.id);
     const dest = join(vault.pluginsDir, item.id);
@@ -116,15 +121,15 @@ export async function compareItem(vault, item) {
   return { ...item, ...extra, status: statusOf(files), files };
 }
 
-export async function compareVault(vault, items) {
+export async function compareVault(vault: Vault, items?: Item[]): Promise<ItemResult[]> {
   const list = items ?? (await listItems());
-  const results = [];
+  const results: ItemResult[] = [];
   for (const item of list) results.push(await compareItem(vault, item));
   return results;
 }
 
-export function summarize(results) {
-  const counts = Object.fromEntries(STATUSES.map((s) => [s, 0]));
+export function summarize(results: ItemResult[]): Record<Status, number> {
+  const counts = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<Status, number>;
   for (const r of results) counts[r.status] += 1;
   return counts;
 }

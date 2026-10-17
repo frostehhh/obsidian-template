@@ -1,10 +1,9 @@
 import * as p from '@clack/prompts';
 import { execFileSync } from 'child_process';
-import { readFile, writeFile, rename, stat } from 'fs/promises';
-import { join, dirname, resolve } from 'path';
-import { fileURLToPath } from 'url';
+import { readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
+import { REPO_ROOT, pathExists } from '../lib/cli.ts';
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CHANGELOG_DIR = join(REPO_ROOT, 'changelog');
 const INDEX_PATH = join(REPO_ROOT, 'CHANGELOG.md');
 const UNRELEASED_PATH = join(CHANGELOG_DIR, 'unreleased.md');
@@ -20,25 +19,16 @@ Group under Added / Changed / Deprecated / Removed / Fixed / Security.
 Breaking changes need a **Migration** note. -->
 `;
 
-function git(...args) {
+function git(...args: string[]): string {
   return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
 }
 
-async function pathExists(target) {
-  try {
-    await stat(target);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function fail(msg) {
+function fail(msg: string): never {
   p.cancel(msg);
   process.exit(1);
 }
 
-function latestTagVersion() {
+function latestTagVersion(): string | null {
   try {
     return git('describe', '--tags', '--abbrev=0', '--match', 'v*').slice(1);
   } catch {
@@ -46,14 +36,14 @@ function latestTagVersion() {
   }
 }
 
-function nextVersion(current, bump) {
-  const [major, minor, patch] = current.split('.').map(Number);
+function nextVersion(current: string, bump: string): string {
+  const [major = 0, minor = 0, patch = 0] = current.split('.').map(Number);
   if (bump === 'major') return `${major + 1}.0.0`;
   if (bump === 'minor') return `${major}.${minor + 1}.0`;
   return `${major}.${minor}.${patch + 1}`;
 }
 
-function hasEntries(markdown) {
+function hasEntries(markdown: string): boolean {
   const withoutComments = markdown.replace(/<!--[\s\S]*?-->/g, '');
   return /^\s*[-*]\s+\S/m.test(withoutComments);
 }
@@ -76,9 +66,10 @@ async function main() {
   if (branch !== RELEASE_BRANCH) fail(`Releases are cut from ${RELEASE_BRANCH}, but the current branch is ${branch}.`);
 
   try {
-    execFileSync('node', [join(REPO_ROOT, 'scripts', 'state', 'state.js'), '--check'], { cwd: REPO_ROOT, stdio: 'pipe' });
+    execFileSync('node', [join(REPO_ROOT, 'scripts', 'state', 'state.ts'), '--check'], { cwd: REPO_ROOT, stdio: 'pipe' });
   } catch (err) {
-    fail(`state.json is out of date. Run \`mise run state\`, commit it, then retry.\n${err.stderr?.toString().trim() ?? ''}`);
+    const detail = (err as { stderr?: Buffer }).stderr?.toString().trim() ?? '';
+    fail(`state.json is out of date. Run \`mise run state\`, commit it, then retry.\n${detail}`);
   }
 
   const unreleased = (await pathExists(UNRELEASED_PATH)) ? await readFile(UNRELEASED_PATH, 'utf8') : '';
@@ -86,7 +77,7 @@ async function main() {
 
   // Resolve the version
   const current = latestTagVersion();
-  let version;
+  let version: string;
   if (BUMPS.includes(target)) {
     if (!current) fail('No v* tag exists yet. Pass an explicit version (e.g. 0.1.0) for the first release.');
     version = nextVersion(current, target);

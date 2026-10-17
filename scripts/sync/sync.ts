@@ -22,8 +22,9 @@ import {
   statusHint,
   renderInSyncNote,
   renderReport,
-} from '../lib/cli.js';
-import { compareVault, compareItem, listItems } from '../lib/compare.js';
+} from '../lib/cli.ts';
+import { compareVault, compareItem, listItems } from '../lib/compare.ts';
+import type { VaultReport } from '../lib/types.ts';
 
 async function main() {
   // Step 1: Load config
@@ -53,7 +54,7 @@ async function main() {
   const items = await listItems();
   const cs = p.spinner();
   cs.start('Comparing template with selected vaults...');
-  const reports = [];
+  const reports: VaultReport[] = [];
   for (const vault of selectedVaults) {
     reports.push({ vault, results: await compareVault(vault, items) });
   }

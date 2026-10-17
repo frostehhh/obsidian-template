@@ -1,7 +1,6 @@
 import * as p from '@clack/prompts';
 import { resolve } from 'path';
 import {
-  OBSIDIAN_ROOT,
   loadConfig,
   discoverVaults,
   makeVault,
@@ -9,8 +8,9 @@ import {
   getTemplateVersion,
   renderReport,
   pathExists,
-} from '../lib/cli.js';
-import { compareVault } from '../lib/compare.js';
+} from '../lib/cli.ts';
+import { compareVault } from '../lib/compare.ts';
+import type { Vault, VaultReport } from '../lib/types.ts';
 import { join } from 'path';
 
 // Usage: compare [vault-name-or-path] [--verbose] [--json] [--check]
@@ -25,7 +25,7 @@ async function main() {
   const vaults = await discoverVaults();
   const version = await getTemplateVersion();
 
-  let selected;
+  let selected: Vault[];
   if (target) {
     const byName = vaults.find((v) => v.name === target);
     const root = byName ? byName.root : resolve(target);
@@ -33,14 +33,14 @@ async function main() {
       console.error(`Not an Obsidian vault: ${root}`);
       process.exit(1);
     }
-    selected = [byName ?? makeVault(root.split('/').at(-1), root)];
+    selected = [byName ?? makeVault(root.split('/').at(-1) ?? root, root)];
   } else {
     p.intro('  compare  —  Obsidian Template Vault');
     selected = await selectVaults({ vaults, defaults: config.defaultVaults ?? [] });
   }
 
   let allInSync = true;
-  const output = [];
+  const output: VaultReport[] = [];
   for (const vault of selected) {
     const results = await compareVault(vault);
     if (results.some((r) => r.status !== 'in sync')) allInSync = false;
