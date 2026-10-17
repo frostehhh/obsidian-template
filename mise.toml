@@ -13,3 +13,7 @@ run = "node scripts/compare/compare.js"
 [tasks.state]
 description = "Refresh state.json from template/ (add --check to only verify)"
 run = "node scripts/state/state.js"
+
+[tasks.typecheck]
+description = "Type-check the repo scripts with tsc"
+run = "npx tsc --noEmit -p ."
