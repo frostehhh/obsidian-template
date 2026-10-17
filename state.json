@@ -1,0 +1,228 @@
+{
+  "template": "obsidian-template",
+  "plugins": [
+    {
+      "id": "advanced-canvas",
+      "name": "Advanced Canvas",
+      "version": "6.3.0"
+    },
+    {
+      "id": "code-block-copy",
+      "name": "Copy button for code blocks",
+      "version": "0.1.0"
+    },
+    {
+      "id": "dataview",
+      "name": "Dataview",
+      "version": "0.5.68"
+    },
+    {
+      "id": "editing-toolbar",
+      "name": "Editing Toolbar",
+      "version": "4.0.8"
+    },
+    {
+      "id": "excalibrain",
+      "name": "ExcaliBrain",
+      "version": "0.2.18"
+    },
+    {
+      "id": "folder-notes",
+      "name": "Folder notes",
+      "version": "1.8.26"
+    },
+    {
+      "id": "highlightr-plugin",
+      "name": "Highlightr",
+      "version": "1.2.2"
+    },
+    {
+      "id": "lazy-plugins",
+      "name": "Lazy Loader",
+      "version": "1.0.24"
+    },
+    {
+      "id": "media-extended",
+      "name": "Media Extended",
+      "version": "4.2.7"
+    },
+    {
+      "id": "mermaid-tools",
+      "name": "Mermaid Tools",
+      "version": "1.4.1"
+    },
+    {
+      "id": "obsidian-excalidraw-plugin",
+      "name": "Excalidraw",
+      "version": "2.24.2"
+    },
+    {
+      "id": "obsidian-git",
+      "name": "Git",
+      "version": "2.38.5"
+    },
+    {
+      "id": "obsidian-hover-editor",
+      "name": "Hover Editor",
+      "version": "0.11.29"
+    },
+    {
+      "id": "obsidian-icon-folder",
+      "name": "Iconize",
+      "version": "2.14.7"
+    },
+    {
+      "id": "obsidian-linter",
+      "name": "Linter",
+      "version": "1.32.0"
+    },
+    {
+      "id": "obsidian-markdown-formatting-assistant-plugin",
+      "name": "Markdown Formatting Assistant",
+      "version": "0.4.1"
+    },
+    {
+      "id": "obsidian-meta-bind-plugin",
+      "name": "Meta Bind",
+      "version": "1.4.15"
+    },
+    {
+      "id": "obsidian-spaced-repetition",
+      "name": "Spaced Repetition",
+      "version": "1.15.4"
+    },
+    {
+      "id": "obsidian-style-settings",
+      "name": "Style Settings",
+      "version": "1.0.9"
+    },
+    {
+      "id": "omnisearch",
+      "name": "Omnisearch",
+      "version": "1.29.3"
+    },
+    {
+      "id": "open-vscode",
+      "name": "Open vault in VS Code",
+      "version": "1.5.0"
+    },
+    {
+      "id": "quickadd",
+      "name": "QuickAdd",
+      "version": "2.12.3"
+    },
+    {
+      "id": "simple-embeds",
+      "name": "Simple Embeds",
+      "version": "1.14.1"
+    },
+    {
+      "id": "supercharged-links-obsidian",
+      "name": "Supercharged Links",
+      "version": "0.13.10"
+    },
+    {
+      "id": "table-editor-obsidian",
+      "name": "Advanced Tables",
+      "version": "0.23.2"
+    },
+    {
+      "id": "tag-wrangler",
+      "name": "Tag Wrangler",
+      "version": "0.6.4"
+    },
+    {
+      "id": "tasknotes",
+      "name": "TaskNotes",
+      "version": "4.11.1"
+    },
+    {
+      "id": "templater-obsidian",
+      "name": "Templater",
+      "version": "2.20.6"
+    },
+    {
+      "id": "vertical-tabs",
+      "name": "Vertical Tabs",
+      "version": "0.18.5"
+    }
+  ],
+  "dirs": {
+    "selectable": [
+      "--Attachments--",
+      "--Obsidian Template--",
+      "--Properties--",
+      "Bases",
+      "Canvas",
+      "Dataviews",
+      "Notes",
+      "Reference Notes",
+      "References"
+    ],
+    "pluginLinked": [
+      {
+        "plugin": "quickadd",
+        "dir": "--Scripts--"
+      },
+      {
+        "plugin": "tasknotes",
+        "dir": "TaskNotes"
+      },
+      {
+        "plugin": "excalibrain",
+        "dir": "ExcaliBrain"
+      },
+      {
+        "plugin": "obsidian-excalidraw-plugin",
+        "dir": "Excalidraw"
+      }
+    ],
+    "excluded": [
+      "Knowledge Confidence"
+    ]
+  },
+  "settings": {
+    "syncable": [
+      {
+        "name": "snippets",
+        "type": "directory"
+      },
+      {
+        "name": "themes",
+        "type": "directory"
+      },
+      {
+        "name": "app.json",
+        "type": "file"
+      },
+      {
+        "name": "appearance.json",
+        "type": "file"
+      },
+      {
+        "name": "templates.json",
+        "type": "file"
+      },
+      {
+        "name": "types.json",
+        "type": "file"
+      }
+    ],
+    "excluded": [
+      "bookmarks.json",
+      "community-plugins.json",
+      "core-plugins-migration.json",
+      "core-plugins.json",
+      "graph.json",
+      "hotkeys.json",
+      "page-preview.json",
+      "starred.json",
+      "workspace.json",
+      "workspaces.json"
+    ]
+  },
+  "dataFiles": [
+    "data.json",
+    "genericPreviewCache.json"
+  ]
+}

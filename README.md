@@ -87,6 +87,8 @@ The `template/.claude/` and `template/.agents/` directories include skills for A
 - **obsidian-quickadd** — configure QuickAdd choices and scripts
 - **defuddle** — extract clean markdown from web pages
 
+Repository workflow skills (in the repo root `.agents/skills/`): **git-workflow-and-versioning** (generic git and release practices) and **obsidian-template-git-workflow** (this repo's commit, changelog and release rules).
+
 ## Getting Started
 
 1. Clone this repository.
@@ -94,3 +96,38 @@ The `template/.claude/` and `template/.agents/` directories include skills for A
 3. Accept the prompt to enable community plugins.
 4. Browse `TaskNotes/Views/tasks-default.base` to see your task board.
 5. Use the QuickAdd command palette (`Ctrl/Cmd+P` → QuickAdd) to create tasks and notes.
+
+## Syncing to other vaults
+
+Requires [mise](https://mise.jdx.dev/) and `npm install` (for the CLI prompts).
+
+```sh
+mise run sync      # copy plugins, directories and settings into other vaults
+mise run compare   # report which of them already match the template
+```
+
+Both commands compare `template/` with the vault file by file, so the sync wizard shows what is already in sync before you choose what to copy. See [scripts/sync/README.md](scripts/sync/README.md).
+
+## Versioning & Changelog
+
+The template follows [Semantic Versioning](https://semver.org/). Releases are annotated git tags (`vX.Y.Z`), and the tag is the source of truth for the version shown by `sync` and `compare`.
+
+| Bump | When |
+|---|---|
+| MAJOR | Breaking change that needs manual migration in existing vaults: vault structure, property schema, folder names, QuickAdd script contracts |
+| MINOR | Backward-compatible additions: new plugins, scripts, bases, skills (while on 0.x, breaking changes also bump MINOR) |
+| PATCH | Backward-compatible fixes and setting tweaks |
+
+When unsure whether a change is breaking, treat it as breaking.
+
+**Changelog.** [CHANGELOG.md](CHANGELOG.md) is an index with one file per release in [changelog/](changelog/). Add a line describing the user-visible impact to `changelog/unreleased.md` in the same commit as the change, grouped under Added / Changed / Deprecated / Removed / Fixed / Security. Breaking changes need a **Migration** note. The `obsidian-template-git-workflow` skill covers this and the commit conventions.
+
+**Releasing.** From a clean `master`:
+
+```sh
+mise run release minor --dry-run   # preview
+mise run release minor             # patch | minor | major | x.y.z
+git push --follow-tags             # publish
+```
+
+The release task moves `changelog/unreleased.md` to `changelog/<version>.md`, updates the index, sets the `package.json` version, commits, and creates the tag. It never pushes.
