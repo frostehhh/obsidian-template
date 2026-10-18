@@ -4,9 +4,9 @@ filters:
   and:
     - file.hasTag("task")
     - file.inFolder("--Attachments--") != true
-    - file.inFolder("--Obsidian Template--") != true
-    - file.inFolder("--Properties--") != true
-    - file.inFolder("--Scripts--") != true
+    - file.inFolder("--Configurations--/Obsidian Template") != true
+    - file.inFolder("--Configurations--/Properties") != true
+    - file.inFolder("--Configurations--/Scripts") != true
     - file.inFolder("Bases") != true
     - file.inFolder("Canvas") != true
     - file.inFolder("Dataviews") != true

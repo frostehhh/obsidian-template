@@ -88,7 +88,7 @@ async function main() {
   const selectedDirs = await p.multiselect({
     message: 'Select content directories to sync  (a = toggle all)',
     options: DIR_OPTIONS.map((dir) => ({ value: dir, label: dir, hint: statusHint(reports, 'dir', dir) })),
-    initialValues: config.defaultDirs ?? ['--Attachments--', '--Obsidian Template--', 'Bases', 'Notes'],
+    initialValues: config.defaultDirs ?? ['--Attachments--', '--Configurations--/Obsidian Template', 'Bases', 'Notes'],
     required: false,
   });
   if (p.isCancel(selectedDirs)) cancel();

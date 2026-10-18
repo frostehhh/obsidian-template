@@ -122,6 +122,9 @@
       },
       "tasknotes": {
         "startupType": "instant"
+      },
+      "vertical-tabs": {
+        "startupType": "instant"
       }
     },
     "loadOrder": []

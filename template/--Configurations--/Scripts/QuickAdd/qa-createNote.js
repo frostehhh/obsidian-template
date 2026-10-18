@@ -1,4 +1,4 @@
-const SCRIPTS_PATH = "--Scripts--/QuickAdd";
+const SCRIPTS_PATH = "--Configurations--/Scripts/QuickAdd";
 
 async function vaultRequire(app, name) {
   const relPath = name.endsWith(".js") ? name : `${name}.js`;
@@ -15,7 +15,7 @@ module.exports = async (params) => {
   const PRESETS = [
     {
       noteName: "Note",
-      templates: "--Obsidian Template--/Frontmatter/Note.md",
+      templates: "--Configurations--/Obsidian Template/Frontmatter/Note.md",
       path: "Notes",
     },
   ];

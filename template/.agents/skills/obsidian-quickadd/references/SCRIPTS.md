@@ -1,6 +1,6 @@
 # QuickAdd Macro Scripts
 
-Scripts live in `--Scripts--/QuickAdd/` and export an async function. They run inside Obsidian's Node.js context and have access to the full Obsidian `app` API.
+Scripts live in `--Configurations--/Scripts/QuickAdd/` and export an async function. They run inside Obsidian's Node.js context and have access to the full Obsidian `app` API.
 
 ## Module signature
 
@@ -20,7 +20,7 @@ Return a string to expose it as `{{MACRO:macroName}}` output in the next templat
 `require` and dynamic `import()` are not available in QuickAdd's script execution context. Use `vaultRequire` instead — it reads a vault file and evaluates it as a CommonJS module:
 
 ```js
-const basePath = "--Scripts--/QuickAdd";
+const basePath = "--Configurations--/Scripts/QuickAdd";
 
 async function vaultRequire(app, name) {
   const relPath = name.endsWith(".js") ? name : `${name}.js`;
@@ -38,7 +38,7 @@ module.exports = async (params) => {
 };
 ```
 
-- Paths are relative to `--Scripts--/QuickAdd/`
+- Paths are relative to `--Configurations--/Scripts/QuickAdd/`
 - `.js` extension is optional
 - Lib files use standard `module.exports = ...` syntax — no changes needed
 - Modules are re-read from disk on every run (no caching)

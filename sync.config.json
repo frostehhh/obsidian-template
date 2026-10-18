@@ -22,6 +22,6 @@
   ],
   "defaultVaults": [],
   "syncDataJson": false,
-  "defaultDirs": ["--Attachments--", "--Obsidian Template--", "Bases", "Notes"],
+  "defaultDirs": ["--Attachments--", "--Configurations--/Obsidian Template", "Bases", "Notes"],
   "defaultSettings": ["templates.json"]
 }

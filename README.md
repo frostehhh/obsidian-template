@@ -7,12 +7,13 @@ A pre-configured Obsidian vault template with an opinionated folder structure, t
 ```
 template/
 ├── --Attachments--/        # Media and file attachments
-├── --Obsidian Template--/  # Note frontmatter templates (via Templater)
-│   └── Frontmatter/        # Note.md, Reference Note.md
-├── --Properties--/         # Obsidian property definitions
-│   └── knowledge-confidence-level.md
-├── --Scripts--/
-│   └── QuickAdd/           # QuickAdd macro scripts
+├── --Configurations--/     # Vault configuration files
+│   ├── Obsidian Template/   # Note frontmatter templates (via Templater)
+│   │   └── Frontmatter/     # Note.md, Reference Note.md
+│   ├── Properties/          # Obsidian property definitions
+│   │   └── knowledge-confidence-level.md
+│   └── Scripts/
+│       └── QuickAdd/        # QuickAdd macro scripts
 ├── .agents/skills/         # Claude agent skills (Obsidian-aware)
 ├── .claude/skills/         # Claude Code skill definitions
 ├── Bases/                  # Obsidian Bases views
@@ -65,7 +66,7 @@ Community plugins included in `.obsidian/plugins/`:
 | [Templater](https://obsidian.md/plugins?id=templater-obsidian) | Advanced note templating and automation with handlebars-like syntax. |
 
 
-### QuickAdd Scripts (`--Scripts--/QuickAdd/`)
+### QuickAdd Scripts (`--Configurations--/Scripts/QuickAdd/`)
 
 See https://quickadd.obsidian.guide/docs/ for information on the relevant plugin.
 

@@ -150,8 +150,8 @@
   "dirs": {
     "selectable": [
       "--Attachments--",
-      "--Obsidian Template--",
-      "--Properties--",
+      "--Configurations--/Obsidian Template",
+      "--Configurations--/Properties",
       "Bases",
       "Canvas",
       "Dataviews",
@@ -162,7 +162,7 @@
     "pluginLinked": [
       {
         "plugin": "quickadd",
-        "dir": "--Scripts--"
+        "dir": "--Configurations--/Scripts"
       },
       {
         "plugin": "tasknotes",

@@ -38,7 +38,7 @@ Choose from a fixed list of top-level template directories (e.g. `Notes`, `Canva
 
 | Plugin | Auto-included directory |
 |---|---|
-| QuickAdd | `--Scripts--` |
+| QuickAdd | `--Configurations--/Scripts` |
 | TaskNotes | `TaskNotes` |
 | Excalibrain | `Excalibrain` |
 | Excalidraw | `Excalidraw` |

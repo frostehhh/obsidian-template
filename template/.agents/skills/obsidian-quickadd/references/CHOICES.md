@@ -126,7 +126,7 @@ Runs a sequence of commands: scripts, inline choices, Obsidian commands, or wait
       {
         "id": "<cmd-uuid>",
         "type": "script",
-        "path": "--Scripts--/QuickAdd/myScript.js"
+        "path": "--Configurations--/Scripts/QuickAdd/myScript.js"
       }
     ]
   }
@@ -137,7 +137,7 @@ Runs a sequence of commands: scripts, inline choices, Obsidian commands, or wait
 
 ```json
 // JavaScript script
-{ "id": "<uuid>", "type": "script", "path": "--Scripts--/QuickAdd/myScript.js" }
+{ "id": "<uuid>", "type": "script", "path": "--Configurations--/Scripts/QuickAdd/myScript.js" }
 
 // Wait (milliseconds)
 { "id": "<uuid>", "name": "Wait", "type": "wait", "milliseconds": 500 }

@@ -10,7 +10,7 @@ QuickAdd automates note creation and capture in Obsidian via four choice types r
 ## Vault layout
 
 - **Plugin config**: `.obsidian/plugins/quickadd/data.json` — all choices live in the `choices` array
-- **Macro scripts**: `--Scripts--/QuickAdd/` — JavaScript files for Macro choices
+- **Macro scripts**: `--Configurations--/Scripts/QuickAdd/` — JavaScript files for Macro choices
 
 ## Choice types
 
@@ -42,7 +42,7 @@ Full variable reference and moment.js tokens → [FORMAT-VARIABLES.md](reference
 
 ## Macro scripts
 
-Scripts are async JS modules placed in `--Scripts--/QuickAdd/`:
+Scripts are async JS modules placed in `--Configurations--/Scripts/QuickAdd/`:
 
 ```js
 module.exports = async (params) => {
@@ -69,7 +69,7 @@ Full script API, error handling, and examples → [SCRIPTS.md](references/SCRIPT
 `require` and dynamic `import()` are not available in QuickAdd's script execution context. Use `vaultRequire` instead — it reads a vault file and evaluates it as a CommonJS module:
 
 ```js
-const basePath = "--Scripts--/QuickAdd";
+const basePath = "--Configurations--/Scripts/QuickAdd";
 
 async function vaultRequire(app, name) {
   const relPath = name.endsWith(".js") ? name : `${name}.js`;
@@ -87,7 +87,7 @@ module.exports = async (params) => {
 };
 ```
 
-- Paths are relative to `--Scripts--/QuickAdd/`
+- Paths are relative to `--Configurations--/Scripts/QuickAdd/`
 - `.js` extension is optional
 - Lib files use standard `module.exports = ...` syntax — no changes needed
 - Modules are re-read from disk on every run (no caching)
@@ -97,7 +97,7 @@ module.exports = async (params) => {
 1. Open `.obsidian/plugins/quickadd/data.json`
 2. Add a new object to `choices` with a fresh UUID
 3. Set `"command": true` to expose it in the command palette
-4. For Macro choices, write the script in `--Scripts--/QuickAdd/<name>.js`
+4. For Macro choices, write the script in `--Configurations--/Scripts/QuickAdd/<name>.js`
 5. Reload QuickAdd in Obsidian to pick up changes
 
 Generate a UUID:
@@ -133,7 +133,7 @@ python3 -c "import uuid; print(uuid.uuid4())"
   "type": "Macro",
   "macro": {
     "commands": [
-      { "type": "script", "path": "--Scripts--/QuickAdd/promptTitle.js" },
+      { "type": "script", "path": "--Configurations--/Scripts/QuickAdd/promptTitle.js" },
       { "type": "template", "templatePath": "Templates/Note.md", ... }
     ]
   }

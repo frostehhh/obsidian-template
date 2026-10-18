@@ -14,7 +14,7 @@
             "name": "qa-taskNotes-createTaskForFolder",
             "type": "UserScript",
             "id": "9049952c-09ef-4f4f-9fae-574618392ebb",
-            "path": "--Scripts--/QuickAdd/qa-taskNotes-createTaskForFolder.js",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-taskNotes-createTaskForFolder.js",
             "settings": {}
           }
         ]
@@ -34,7 +34,7 @@
             "name": "qa-taskNotes-createOrOpenTasksDefaultViewForFolder",
             "type": "UserScript",
             "id": "74390785-e064-48d7-8ad5-a4d66a62f7c3",
-            "path": "--Scripts--/QuickAdd/qa-taskNotes-createOrOpenTasksDefaultViewForFolder.js",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-taskNotes-createOrOpenTasksDefaultViewForFolder.js",
             "settings": {}
           }
         ]
@@ -54,7 +54,7 @@
             "name": "qa-createOrOpenBaseForFolder",
             "type": "UserScript",
             "id": "20706b04-caac-4ddb-b9e6-f32a596d09a8",
-            "path": "--Scripts--/QuickAdd/qa-createOrOpenBaseForFolder.js",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-createOrOpenBaseForFolder.js",
             "settings": {}
           }
         ]
@@ -74,7 +74,7 @@
             "name": "qa-folderCreateFolderChildNote",
             "type": "UserScript",
             "id": "582eeeb9-fd37-496d-b3cc-9feda827b238",
-            "path": "--Scripts--/QuickAdd/qa-folderCreateFolderChildNote.js",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-folderCreateFolderChildNote.js",
             "settings": {}
           }
         ]
@@ -94,7 +94,7 @@
             "name": "qa-wrapFileInFolder",
             "type": "UserScript",
             "id": "43b86b9a-d723-4a64-8919-92a0b79d9694",
-            "path": "--Scripts--/QuickAdd/qa-wrapFileInFolder.js",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-wrapFileInFolder.js",
             "settings": {}
           }
         ]
@@ -114,7 +114,7 @@
             "name": "test",
             "type": "UserScript",
             "id": "71a43c62-cc8b-4ec4-9c70-fc5eec1fcad7",
-            "path": "--Scripts--/QuickAdd/test.js",
+            "path": "--Configurations--/Scripts/QuickAdd/test.js",
             "settings": {}
           }
         ]
@@ -134,7 +134,7 @@
             "name": "qa-createNote",
             "type": "UserScript",
             "id": "3622b7cd-38a2-4145-9d87-a0c5bc02d6ca",
-            "path": "--Scripts--/QuickAdd/qa-createNote.js",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-createNote.js",
             "settings": {}
           }
         ]

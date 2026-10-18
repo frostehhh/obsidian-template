@@ -1,4 +1,4 @@
-const SCRIPTS_PATH = "--Scripts--/QuickAdd";
+const SCRIPTS_PATH = "--Configurations--/Scripts/QuickAdd";
 
 async function vaultRequire(app, name) {
   const relPath = name.endsWith(".js") ? name : `${name}.js`;

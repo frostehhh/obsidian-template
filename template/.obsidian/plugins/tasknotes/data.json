@@ -8,7 +8,7 @@
   "hideIdentifyingTagsMode": "all",
   "taskPropertyName": "",
   "taskPropertyValue": "",
-  "excludedFolders": "--Attachments--, --Obsidian Template--, --Properties--, --Scripts--, Bases, Canvas, Dataviews, Excalibrain, Excalidraw",
+  "excludedFolders": "--Attachments--, --Configurations--/Obsidian Template, --Configurations--/Properties, --Configurations--/Scripts, Bases, Canvas, Dataviews, Excalibrain, Excalidraw",
   "defaultTaskPriority": "none",
   "defaultTaskStatus": "0-open/none",
   "taskOrgFiltersCollapsed": false,
@@ -663,8 +663,8 @@
     "isRunning": false,
     "timeRemaining": 1500
   },
-  "lastPomodoroDate": "2026-06-27",
+  "lastPomodoroDate": "2026-09-28",
   "checkForUpdatesOnStartup": true,
-  "lastNotifiedReleaseVersion": "4.12.3",
+  "lastNotifiedReleaseVersion": "4.13.9",
   "starterNoteCreated": false
 }
