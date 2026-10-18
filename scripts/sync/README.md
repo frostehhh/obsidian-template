@@ -9,6 +9,22 @@ mise run sync      # interactive wizard that copies items into other vaults
 mise run compare   # read-only report of how a vault matches the template
 ```
 
+### Non-interactive / agent mode
+
+All tools also support a non-interactive mode for CI and AI agents:
+
+```sh
+# Existing scripts with --non-interactive
+node scripts/sync/sync.ts --non-interactive --vaults Odyssey,Journal --dry-run --json
+node scripts/compare/compare.ts --vaults Odyssey,Journal --json
+
+# Or use the dedicated agent wrappers
+node scripts/agent/sync.ts --vaults Odyssey,Journal --dry-run --json
+node scripts/agent/compare.ts --vaults Odyssey,Journal --json
+node scripts/agent/release.ts patch --yes --dry-run --json
+node scripts/agent/state.ts --check --json
+```
+
 ## How it works
 
 The wizard first asks for the target vaults, compares the template with each of them, shows which items already match, and then walks through prompts for what to copy. Every option carries its comparison status in the hint.
@@ -60,10 +76,18 @@ For each selected plugin, all files (and subdirectories) in the plugin's source 
 
 Content directories and settings items are copied after plugins. Existing files at the destination are overwritten; files present only in the destination are left untouched (no deletions). Afterwards the synced items are compared again and the wizard reports whether they now match the template.
 
+## sync
+
+```sh
+mise run sync [--non-interactive] [--vaults A,B] [--plugins x,y] [--dirs D,E] [--settings f,g] [--data-json] [--dry-run] [--json]
+```
+
+With `--non-interactive` the wizard is skipped and selections are read from CLI flags and `sync.config.json`. Use `--dry-run` to preview what would be copied without making changes. `--json` prints structured output instead of human-readable text.
+
 ## compare
 
 ```sh
-mise run compare [vault-name-or-path] [--verbose] [--json] [--check]
+mise run compare [vault-name-or-path] [--vaults A,B] [--verbose] [--json] [--check]
 ```
 
 Read-only. Prints the same statuses for every plugin, directory and setting, for example:

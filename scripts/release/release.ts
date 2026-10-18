@@ -1,122 +1,68 @@
 import * as p from '@clack/prompts';
-import { execFileSync } from 'child_process';
-import { readFile, writeFile } from 'fs/promises';
-import { join } from 'path';
-import { REPO_ROOT, pathExists } from '../lib/cli.ts';
+import { executeRelease, validateReleaseAsync } from '../lib/release.ts';
 
-const CHANGELOG_DIR = join(REPO_ROOT, 'changelog');
-const INDEX_PATH = join(REPO_ROOT, 'CHANGELOG.md');
-const UNRELEASED_PATH = join(CHANGELOG_DIR, 'unreleased.md');
-const PACKAGE_PATH = join(REPO_ROOT, 'package.json');
-const RELEASE_BRANCH = 'master';
-const BUMPS = ['patch', 'minor', 'major'];
-const SEMVER = /^\d+\.\d+\.\d+$/;
-
-const UNRELEASED_TEMPLATE = `# Unreleased
-
-<!-- One line per user-visible change, added in the same commit as the change.
-Group under Added / Changed / Deprecated / Removed / Fixed / Security.
-Breaking changes need a **Migration** note. -->
-`;
-
-function git(...args: string[]): string {
-  return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8' }).trim();
+function parseArgs() {
+  const args = process.argv.slice(2);
+  return {
+    dryRun: args.includes('--dry-run'),
+    yes: args.includes('--yes'),
+    json: args.includes('--json'),
+    target: args.find((a) => !a.startsWith('--')),
+  };
 }
 
 function fail(msg: string): never {
-  p.cancel(msg);
+  if (p.cancel) {
+    p.cancel(msg);
+  } else {
+    console.error(msg);
+  }
   process.exit(1);
 }
 
-function latestTagVersion(): string | null {
-  try {
-    return git('describe', '--tags', '--abbrev=0', '--match', 'v*').slice(1);
-  } catch {
-    return null;
-  }
-}
-
-function nextVersion(current: string, bump: string): string {
-  const [major = 0, minor = 0, patch = 0] = current.split('.').map(Number);
-  if (bump === 'major') return `${major + 1}.0.0`;
-  if (bump === 'minor') return `${major}.${minor + 1}.0`;
-  return `${major}.${minor}.${patch + 1}`;
-}
-
-function hasEntries(markdown: string): boolean {
-  const withoutComments = markdown.replace(/<!--[\s\S]*?-->/g, '');
-  return /^\s*[-*]\s+\S/m.test(withoutComments);
-}
-
 async function main() {
-  const args = process.argv.slice(2);
-  const dryRun = args.includes('--dry-run');
-  const assumeYes = args.includes('--yes');
-  const target = args.find((a) => !a.startsWith('--'));
+  const args = parseArgs();
 
-  p.intro('  release  —  Obsidian Template');
-
-  if (!target) {
-    fail('Usage: mise run release <patch|minor|major|x.y.z> [--dry-run] [--yes]');
+  if (!args.target) {
+    fail('Usage: mise run release <patch|minor|major|x.y.z> [--dry-run] [--yes] [--json]');
   }
 
-  // Preconditions
-  if (git('status', '--porcelain', '--untracked-files=no')) fail('Working tree is not clean. Commit or stash changes first.');
-  const branch = git('rev-parse', '--abbrev-ref', 'HEAD');
-  if (branch !== RELEASE_BRANCH) fail(`Releases are cut from ${RELEASE_BRANCH}, but the current branch is ${branch}.`);
-
-  try {
-    execFileSync('node', [join(REPO_ROOT, 'scripts', 'state', 'state.ts'), '--check'], { cwd: REPO_ROOT, stdio: 'pipe' });
-  } catch (err) {
-    const detail = (err as { stderr?: Buffer }).stderr?.toString().trim() ?? '';
-    fail(`state.json is out of date. Run \`mise run state\`, commit it, then retry.\n${detail}`);
+  const isNonInteractive = args.yes;
+  if (!isNonInteractive) {
+    p.intro('  release  —  Obsidian Template');
   }
 
-  const unreleased = (await pathExists(UNRELEASED_PATH)) ? await readFile(UNRELEASED_PATH, 'utf8') : '';
-  const unreleasedHasEntries = hasEntries(unreleased);
+  const validation = await validateReleaseAsync(args.target);
+  if (!validation.valid) {
+    fail(validation.error!);
+  }
 
-  // Resolve the version
-  const current = latestTagVersion();
-  let version: string;
-  if (BUMPS.includes(target)) {
-    if (!current) fail('No v* tag exists yet. Pass an explicit version (e.g. 0.1.0) for the first release.');
-    version = nextVersion(current, target);
-  } else if (SEMVER.test(target)) {
-    version = target;
+  const { currentVersion, version, tag, baseline, date, steps } = validation;
+
+  if (args.json) {
+    console.log(JSON.stringify({
+      previousVersion: currentVersion,
+      version,
+      tag,
+      date,
+      baseline,
+      steps,
+      dryRun: args.dryRun,
+    }, null, 2));
+  } else if (!isNonInteractive) {
+    p.log.info(`${currentVersion ? `v${currentVersion}` : 'no previous tag'} → ${tag}\n${steps.map((s) => `  - ${s}`).join('\n')}`);
   } else {
-    fail(`"${target}" is not patch, minor, major or an x.y.z version.`);
+    console.log(`${currentVersion ? `v${currentVersion}` : 'no previous tag'} → ${tag}`);
+    for (const step of steps) console.log(`  - ${step}`);
   }
 
-  const tag = `v${version}`;
-  if (git('tag', '--list', tag)) fail(`Tag ${tag} already exists.`);
-
-  // A pre-written changelog/<version>.md (the baseline) replaces the unreleased rollover
-  const releaseFile = join(CHANGELOG_DIR, `${version}.md`);
-  const baseline = await pathExists(releaseFile);
-  if (baseline && unreleasedHasEntries) {
-    fail(`changelog/${version}.md already exists and unreleased.md also has entries. Merge them first.`);
-  }
-  if (!baseline && !unreleasedHasEntries) {
-    fail('changelog/unreleased.md has no entries. Describe the changes before releasing.');
-  }
-
-  const date = new Date().toLocaleDateString('en-CA');
-  const steps = [
-    baseline
-      ? `use existing changelog/${version}.md`
-      : `move changelog/unreleased.md to changelog/${version}.md (dated ${date}) and add it to CHANGELOG.md`,
-    `set package.json version to ${version}`,
-    `commit "Release ${version}"`,
-    `create annotated tag ${tag}`,
-  ];
-  p.log.info(`${current ? `v${current}` : 'no previous tag'} → ${tag}\n${steps.map((s) => `  - ${s}`).join('\n')}`);
-
-  if (dryRun) {
-    p.outro('Dry run: nothing was changed.');
+  if (args.dryRun) {
+    if (!isNonInteractive) p.outro('Dry run: nothing was changed.');
+    else console.log('Dry run: nothing was changed.');
     return;
   }
 
-  if (!assumeYes) {
+  if (!isNonInteractive) {
     const proceed = await p.confirm({ message: `Create release ${tag}?`, initialValue: true });
     if (p.isCancel(proceed) || !proceed) {
       p.cancel('Cancelled.');
@@ -124,31 +70,21 @@ async function main() {
     }
   }
 
-  // Changelog rollover
-  if (!baseline) {
-    const body = unreleased.replace(/^# Unreleased\s*$/m, `# [${version}] - ${date}`);
-    await writeFile(releaseFile, body);
-    await writeFile(UNRELEASED_PATH, UNRELEASED_TEMPLATE);
-
-    const index = await readFile(INDEX_PATH, 'utf8');
-    const marker = '- [Unreleased](changelog/unreleased.md)';
-    if (!index.includes(marker)) fail('CHANGELOG.md is missing the Unreleased link; cannot add the new release.');
-    await writeFile(INDEX_PATH, index.replace(marker, `${marker}\n- [${version}](changelog/${version}.md) - ${date}`));
+  try {
+    const result = await executeRelease({ target: args.target, dryRun: false });
+    if (args.json) {
+      console.log(JSON.stringify({ created: result.tag, version: result.version, previousVersion: result.previousVersion, date: result.date }, null, 2));
+    } else if (!isNonInteractive) {
+      p.outro(`Created ${result.tag}. Review, then publish with: git push --follow-tags`);
+    } else {
+      console.log(`Created ${result.tag}. Review, then publish with: git push --follow-tags`);
+    }
+  } catch (err) {
+    fail(String(err));
   }
-
-  // Version
-  const pkg = JSON.parse(await readFile(PACKAGE_PATH, 'utf8'));
-  pkg.version = version;
-  await writeFile(PACKAGE_PATH, `${JSON.stringify(pkg, null, 2)}\n`);
-
-  git('add', 'CHANGELOG.md', 'changelog', 'package.json');
-  git('commit', '-m', `Release ${version}`);
-  git('tag', '-a', tag, '-m', `Release ${version}`);
-
-  p.outro(`Created ${tag}. Review, then publish with: git push --follow-tags`);
 }
 
 main().catch((err) => {
-  p.log.error(String(err));
+  console.error(String(err));
   process.exit(1);
 });

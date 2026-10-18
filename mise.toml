@@ -17,3 +17,19 @@ run = "node scripts/state/state.ts"
 [tasks.typecheck]
 description = "Type-check the repo scripts with tsc"
 run = "npx tsc --noEmit -p ."
+
+[tasks."agent:sync"]
+description = "Non-interactive sync: node scripts/agent/sync.ts --vaults X,Y [--dry-run] [--json]"
+run = "node scripts/agent/sync.ts"
+
+[tasks."agent:compare"]
+description = "Non-interactive compare: node scripts/agent/compare.ts --vaults X,Y [--json] [--check]"
+run = "node scripts/agent/compare.ts"
+
+[tasks."agent:release"]
+description = "Non-interactive release: node scripts/agent/release.ts <patch|minor|major|x.y.z> [--yes] [--json]"
+run = "node scripts/agent/release.ts"
+
+[tasks."agent:state"]
+description = "Non-interactive state check: node scripts/agent/state.ts [--check] [--json]"
+run = "node scripts/agent/state.ts"
