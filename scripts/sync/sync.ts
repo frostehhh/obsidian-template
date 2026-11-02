@@ -1,4 +1,6 @@
 import * as p from '@clack/prompts';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
 import {
   PLUGIN_DIR_CONDITIONS,
   DIR_OPTIONS,
@@ -364,7 +366,28 @@ async function main() {
     }
   }
 
+  // Prompt to save selections to vault-level config (interactive mode only)
   if (!args.nonInteractive) {
+    const saveConfig = await p.confirm({
+      message: 'Save these selections to each vault\'s .obsidian/sync.config.json?',
+      initialValue: false,
+    });
+    if (p.isCancel(saveConfig)) cancel();
+
+    if (saveConfig) {
+      for (const { vault, pluginIds, dirs, settings, syncDataJson: vaultSyncDataJson } of vaultPlans) {
+        const vaultConfigPath = join(vault.root, '.obsidian', 'sync.config.json');
+        const vaultConfig = {
+          defaultPlugins: pluginIds,
+          defaultDirs: dirs,
+          defaultSettings: settings,
+          syncDataJson: vaultSyncDataJson,
+        };
+        await writeFile(vaultConfigPath, `${JSON.stringify(vaultConfig, null, 2)}\n`);
+        p.log.success(`Updated ${vault.name}/.obsidian/sync.config.json`);
+      }
+    }
+
     const totalPlugins = vaultPlans.reduce((sum, vp) => sum + vp.pluginIds.length, 0);
     const totalDirs = vaultPlans.reduce((sum, vp) => sum + vp.dirs.length, 0);
     const totalSettings = vaultPlans.reduce((sum, vp) => sum + vp.settings.length, 0);
