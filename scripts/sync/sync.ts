@@ -17,7 +17,7 @@ import {
 } from '../lib/cli.ts';
 import { listItems } from '../lib/compare.ts';
 import { executeSync, buildSyncPlan, resolveVaultConfig } from '../lib/sync.ts';
-import type { VaultReport } from '../lib/types.ts';
+import type { Vault, VaultReport } from '../lib/types.ts';
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -72,10 +72,13 @@ async function main() {
   }
 
   let selectedVaults;
-  let selectedPluginIds: string[] = [];
-  let selectedDirs: string[] = [];
-  let selectedSettings: string[] = [];
-  let syncDataJson = false;
+  let vaultPlans: Array<{
+    vault: Vault;
+    pluginIds: string[];
+    dirs: string[];
+    settings: string[];
+    syncDataJson: boolean;
+  }> = [];
 
   if (args.nonInteractive) {
     // Non-interactive mode: resolve from args, vault-level config, and repo config
@@ -96,7 +99,7 @@ async function main() {
       selectedVaults = vaults;
     }
   } else {
-    // Interactive mode
+    // Interactive mode — prompts per vault so vault-level config can be used as defaults
     p.intro(`  sync  —  Obsidian Template Vault  (template ${templateVersion})`);
 
     selectedVaults = await selectVaults({
@@ -109,10 +112,6 @@ async function main() {
     const cs = p.spinner();
     cs.start('Comparing template with selected vaults...');
     const reports: VaultReport[] = [];
-    for (const vault of selectedVaults) {
-      reports.push({ vault, results: await listItems().then(() => []) }); // placeholder, will recompare
-    }
-    // Actually compare properly
     const { compareVault } = await import('../lib/compare.ts');
     for (const vault of selectedVaults) {
       reports.push({ vault, results: await compareVault(vault, items) });
@@ -120,116 +119,104 @@ async function main() {
     cs.stop('Comparison complete.');
     p.note(renderInSyncNote(reports), 'Currently in sync');
 
-    const pluginResult = await multiselectWithToggle({
-      message: 'Select plugins to sync',
-      options: plugins.map((plugin) => ({
-        value: plugin.id,
-        label: plugin.name,
-        hint: `v${plugin.version} · ${statusHint(reports, 'plugin', plugin.id)}`,
-      })),
-      initialValues: config.defaultPlugins ?? [],
-      required: true,
-    });
-    if (p.isCancel(pluginResult)) cancel();
-    selectedPluginIds = pluginResult;
-
-    const autoDirs = PLUGIN_DIR_CONDITIONS
-      .filter((c) => selectedPluginIds.includes(c.pluginId))
-      .map((c) => c.dir);
-
-    if (autoDirs.length > 0) {
-      p.log.info(
-        `Auto-included directories (based on plugin selection):\n${autoDirs.map((d) => `  ${d}`).join('\n')}`
-      );
-    }
-
-    const dirResult = await p.multiselect({
-      message: 'Select content directories to sync  (a = toggle all)',
-      options: DIR_OPTIONS.map((dir) => ({ value: dir, label: dir, hint: statusHint(reports, 'dir', dir) })),
-      initialValues: config.defaultDirs ?? ['--Attachments--', '--Configurations--/Obsidian Template', 'Bases', 'Notes'],
-      required: false,
-    });
-    if (p.isCancel(dirResult)) cancel();
-    selectedDirs = dirResult ?? [];
-
-    const settingResult = await multiselectWithToggle({
-      message: 'Select Obsidian settings to sync',
-      options: SETTINGS_ITEMS.map((item) => ({
-        value: item,
-        label: item,
-        hint: `${item.endsWith('.json') ? 'file' : 'directory'} · ${statusHint(reports, 'setting', item)}`,
-      })),
-      initialValues: config.defaultSettings ?? [],
-    });
-    if (p.isCancel(settingResult)) cancel();
-    selectedSettings = settingResult ?? [];
-
-    syncDataJson = config.syncDataJson ?? false;
-    if (!syncDataJson) {
-      const answer = await p.confirm({
-        message: 'Overwrite existing data.json if it exists (plugin settings)?',
-        initialValue: false,
-      });
-      if (p.isCancel(answer)) cancel();
-      syncDataJson = answer;
-    }
-
-    // Merge auto-dirs
-    const finalDirsInteractive = [...new Set([...(selectedDirs ?? []), ...autoDirs])];
-
-    // Build plan for display
-    const plan = await buildSyncPlan({
-      vaults: selectedVaults,
-      plugins,
-      pluginIds: selectedPluginIds,
-      dirs: finalDirsInteractive,
-      settings: selectedSettings ?? [],
-      syncDataJson,
-    });
-
-    p.log.info(`Will sync ${selectedPluginIds.length} plugin(s) to ${selectedVaults.length} vault(s):\n`);
+    // Prompt per vault
+    const vaultSelections: Array<{
+      vault: (typeof selectedVaults)[number];
+      pluginIds: string[];
+      dirs: string[];
+      settings: string[];
+      syncDataJson: boolean;
+    }> = [];
 
     for (const vault of selectedVaults) {
-      const vaultPlan = plan.filter((e) => e.vault.name === vault.name);
-      const toAdd = vaultPlan.filter((e) => e.addToCommunityPlugins).map((e) => e.plugin.id);
-      const lines = vaultPlan.map((e) => {
-        const fileCount = e.filesToCopy.length + e.subDirs.length;
-        const skipped = e.filesToSkip.length > 0 ? `, skip ${e.filesToSkip.join(', ')}` : '';
-        return `  ${e.plugin.name} (${fileCount} item(s)${skipped})`;
+      p.log.info(`\n--- Configuring sync for ${vault.name} ---`);
+
+      const vaultConfig = await loadVaultConfig(vault.root);
+      const defaults = resolveVaultConfig(vaultConfig, config, {});
+
+      const pluginResult = await multiselectWithToggle({
+        message: `  Select plugins for ${vault.name}`,
+        options: plugins.map((plugin) => ({
+          value: plugin.id,
+          label: plugin.name,
+          hint: `v${plugin.version} · ${statusHint(reports, 'plugin', plugin.id)}`,
+        })),
+        initialValues: defaults.pluginIds,
+        required: true,
       });
-      p.log.info(`→ ${vault.name}:\n${lines.join('\n')}`);
-      if (toAdd.length > 0) {
-        p.log.info(`  community-plugins.json: will add [${toAdd.join(', ')}]`);
+      if (p.isCancel(pluginResult)) cancel();
+
+      const vaultAutoDirs = PLUGIN_DIR_CONDITIONS
+        .filter((c) => pluginResult.includes(c.pluginId))
+        .map((c) => c.dir);
+
+      if (vaultAutoDirs.length > 0) {
+        p.log.info(
+          `  Auto-included directories: ${vaultAutoDirs.join(', ')}`
+        );
       }
+
+      const dirResult = await p.multiselect({
+        message: `  Select directories for ${vault.name}`,
+        options: DIR_OPTIONS.map((dir) => ({ value: dir, label: dir, hint: statusHint(reports, 'dir', dir) })),
+        initialValues: defaults.dirs,
+        required: false,
+      });
+      if (p.isCancel(dirResult)) cancel();
+
+      const settingResult = await multiselectWithToggle({
+        message: `  Select settings for ${vault.name}`,
+        options: SETTINGS_ITEMS.map((item) => ({
+          value: item,
+          label: item,
+          hint: `${item.endsWith('.json') ? 'file' : 'directory'} · ${statusHint(reports, 'setting', item)}`,
+        })),
+        initialValues: defaults.settings,
+      });
+      if (p.isCancel(settingResult)) cancel();
+
+      let vaultSyncDataJson = defaults.syncDataJson;
+      if (!vaultSyncDataJson) {
+        const answer = await p.confirm({
+          message: `  Overwrite data.json for ${vault.name}?`,
+          initialValue: false,
+        });
+        if (p.isCancel(answer)) cancel();
+        vaultSyncDataJson = answer;
+      }
+
+      const finalDirs = [...new Set([...(dirResult ?? []), ...vaultAutoDirs])];
+
+      vaultSelections.push({
+        vault,
+        pluginIds: pluginResult,
+        dirs: finalDirs,
+        settings: settingResult ?? [],
+        syncDataJson: vaultSyncDataJson,
+      });
     }
 
-    if (finalDirsInteractive.length > 0) {
-      const userDirs = finalDirsInteractive.filter((d) => !autoDirs.includes(d));
-      const parts = [];
-      if (userDirs.length > 0) parts.push(userDirs.join(', '));
-      if (autoDirs.length > 0) parts.push(`+auto: ${autoDirs.join(', ')}`);
-      p.log.info(`Directories: ${parts.join('  ')}`);
-    }
-
-    if ((selectedSettings ?? []).length > 0) {
-      p.log.info(`Settings:    ${selectedSettings.join(', ')}`);
+    // Summary
+    p.log.info(`\nWill sync to ${selectedVaults.length} vault(s):\n`);
+    for (const { vault, pluginIds, dirs, settings } of vaultSelections) {
+      p.log.info(`→ ${vault.name}:`);
+      p.log.info(`  Plugins:     ${pluginIds.length > 0 ? pluginIds.join(', ') : 'none'}`);
+      p.log.info(`  Directories: ${dirs.length > 0 ? dirs.join(', ') : 'none'}`);
+      p.log.info(`  Settings:    ${settings.length > 0 ? settings.join(', ') : 'none'}`);
     }
 
     const proceed = await p.confirm({ message: 'Proceed with sync?', initialValue: true });
     if (p.isCancel(proceed) || !proceed) cancel();
 
-    // Use finalDirsInteractive for the rest of the flow
-    selectedDirs = finalDirsInteractive;
+    // Build vaultPlans from interactive selections
+    vaultPlans = vaultSelections.map((vs) => ({
+      vault: vs.vault,
+      pluginIds: vs.pluginIds,
+      dirs: vs.dirs,
+      settings: vs.settings,
+      syncDataJson: vs.syncDataJson,
+    }));
   }
-
-  // Build per-vault plans
-  let vaultPlans: Array<{
-    vault: (typeof selectedVaults)[number];
-    pluginIds: string[];
-    dirs: string[];
-    settings: string[];
-    syncDataJson: boolean;
-  }>;
 
   if (args.nonInteractive) {
     vaultPlans = await Promise.all(selectedVaults.map(async (vault) => {
@@ -254,19 +241,8 @@ async function main() {
 
       return { vault, ...resolved, dirs: finalDirs };
     }));
-  } else {
-    const autoDirs = PLUGIN_DIR_CONDITIONS
-      .filter((c) => selectedPluginIds.includes(c.pluginId))
-      .map((c) => c.dir);
-    const finalDirs = [...new Set([...selectedDirs, ...autoDirs])];
-    vaultPlans = selectedVaults.map((vault) => ({
-      vault,
-      pluginIds: selectedPluginIds,
-      dirs: finalDirs,
-      settings: selectedSettings ?? [],
-      syncDataJson,
-    }));
   }
+  // Interactive mode: vaultPlans is already built inside the interactive block above
 
   if (args.dryRun) {
     const output = {
