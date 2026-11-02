@@ -10,7 +10,7 @@ import {
   copyAny,
 } from './cli.ts';
 import { compareVault, compareItem, listItems } from './compare.ts';
-import type { Vault, PluginInfo, ItemResult } from './types.ts';
+import type { Vault, PluginInfo, ItemResult, SyncConfig } from './types.ts';
 
 export interface SyncPlanEntry {
   plugin: PluginInfo;
@@ -48,6 +48,31 @@ export interface SyncResult {
   plan: SyncPlanEntry[];
   preReports: SyncPreReport[];
   postReports: SyncPostReport[];
+}
+
+export interface ResolvedVaultConfig {
+  pluginIds: string[];
+  dirs: string[];
+  settings: string[];
+  syncDataJson: boolean;
+}
+
+export function resolveVaultConfig(
+  vaultConfig: SyncConfig,
+  repoConfig: SyncConfig,
+  cliArgs: {
+    plugins?: string[];
+    dirs?: string[];
+    settings?: string[];
+    dataJson?: boolean;
+  }
+): ResolvedVaultConfig {
+  const pluginIds = cliArgs.plugins ?? vaultConfig.defaultPlugins ?? repoConfig.defaultPlugins ?? [];
+  const dirs = cliArgs.dirs ?? vaultConfig.defaultDirs ?? repoConfig.defaultDirs ?? ['--Attachments--', '--Configurations--/Obsidian Template', 'Bases', 'Notes'];
+  const settings = cliArgs.settings ?? vaultConfig.defaultSettings ?? repoConfig.defaultSettings ?? [];
+  const syncDataJson = cliArgs.dataJson ?? vaultConfig.syncDataJson ?? repoConfig.syncDataJson ?? false;
+
+  return { pluginIds, dirs, settings, syncDataJson };
 }
 
 export async function buildSyncPlan(options: SyncOptions): Promise<SyncPlanEntry[]> {

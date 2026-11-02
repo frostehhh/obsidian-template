@@ -123,3 +123,25 @@ A `sync.config.json` file at the repo root can pre-select defaults to skip re-an
   "syncDataJson": false
 }
 ```
+
+### Vault-level configuration
+
+Each vault can also have its own `.obsidian/sync.config.json` to control what gets synced to it specifically. This lets vault owners customize their sync without modifying the template repo's config.
+
+Priority (highest to lowest):
+1. CLI flags (`--plugins`, `--dirs`, `--settings`, `--data-json`)
+2. Vault-level `.obsidian/sync.config.json`
+3. Repo-level `sync.config.json`
+
+Example vault-level config (`Odyssey/.obsidian/sync.config.json`):
+
+```json
+{
+  "defaultPlugins": ["dataview", "excalidraw"],
+  "defaultDirs": ["Notes", "Reference Notes"],
+  "defaultSettings": ["templates.json", "appearance.json"],
+  "syncDataJson": true
+}
+```
+
+When syncing to `Odyssey`, only `dataview` + `excalidraw` plugins and `Notes` + `Reference Notes` directories would be copied, even if the repo-level config includes other items.

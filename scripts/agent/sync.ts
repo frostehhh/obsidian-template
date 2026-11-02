@@ -1,11 +1,13 @@
 import {
   PLUGIN_DIR_CONDITIONS,
   loadConfig,
+  loadVaultConfig,
   discoverPlugins,
   discoverVaults,
   getTemplateVersion,
 } from '../lib/cli.ts';
-import { executeSync, buildSyncPlan } from '../lib/sync.ts';
+import { executeSync, buildSyncPlan, resolveVaultConfig } from '../lib/sync.ts';
+import type { SyncPreReport, SyncPostReport } from '../lib/sync.ts';
 import type { Vault } from '../lib/types.ts';
 
 function parseArgs() {
@@ -78,96 +80,104 @@ async function main() {
     process.exit(1);
   }
 
-  // Resolve plugins
-  let selectedPluginIds: string[];
-  if (args.plugins) {
-    selectedPluginIds = args.plugins;
-    const unknown = selectedPluginIds.filter((id) => !allPlugins.find((p) => p.id === id));
+  // Resolve per-vault configuration
+  const vaultPlans = await Promise.all(selectedVaults.map(async (vault) => {
+    const vaultConfig = await loadVaultConfig(vault.root);
+    const resolved = resolveVaultConfig(vaultConfig, config, {
+      plugins: args.plugins,
+      dirs: args.dirs,
+      settings: args.settings,
+      dataJson: args.dataJson,
+    });
+
+    const unknown = resolved.pluginIds.filter((id) => !allPlugins.find((p) => p.id === id));
     if (unknown.length > 0) {
-      console.error(`Unknown plugin(s): ${unknown.join(', ')}`);
+      console.error(`Vault ${vault.name}: unknown plugin(s): ${unknown.join(', ')}`);
       process.exit(1);
     }
-  } else {
-    selectedPluginIds = config.defaultPlugins ?? [];
-  }
 
-  if (selectedPluginIds.length === 0) {
-    console.error('No plugins selected. Use --plugins or set defaultPlugins in sync.config.json.');
-    process.exit(1);
-  }
+    const autoDirs = PLUGIN_DIR_CONDITIONS
+      .filter((c) => resolved.pluginIds.includes(c.pluginId))
+      .map((c) => c.dir);
+    const finalDirs = [...new Set([...resolved.dirs, ...autoDirs])];
 
-  // Resolve directories
-  let selectedDirs: string[];
-  if (args.dirs) {
-    selectedDirs = args.dirs;
-  } else {
-    selectedDirs = config.defaultDirs ?? ['--Attachments--', '--Configurations--/Obsidian Template', 'Bases', 'Notes'];
-  }
-
-  // Auto-include plugin-linked directories
-  const autoDirs = PLUGIN_DIR_CONDITIONS
-    .filter((c) => selectedPluginIds.includes(c.pluginId))
-    .map((c) => c.dir);
-  const finalDirs = [...new Set([...selectedDirs, ...autoDirs])];
-
-  // Resolve settings
-  let selectedSettings: string[];
-  if (args.settings) {
-    selectedSettings = args.settings;
-  } else {
-    selectedSettings = config.defaultSettings ?? [];
-  }
-
-  const syncDataJson = args.dataJson || (config.syncDataJson ?? false);
-  const selectedPlugins = allPlugins.filter((pl) => selectedPluginIds.includes(pl.id));
+    return { vault, config: resolved, finalDirs };
+  }));
 
   if (args.dryRun) {
-    const plan = await buildSyncPlan({
-      vaults: selectedVaults,
-      plugins: allPlugins,
-      pluginIds: selectedPluginIds,
-      dirs: finalDirs,
-      settings: selectedSettings,
-      syncDataJson,
-    });
     const output = {
       templateVersion,
-      vaults: selectedVaults.map((v) => v.name),
-      plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
-      directories: finalDirs,
-      settings: selectedSettings,
-      syncDataJson,
-      plan: plan.map((e) => ({
-        vault: e.vault.name,
-        plugin: e.plugin.id,
-        filesToCopy: e.filesToCopy,
-        filesToSkip: e.filesToSkip,
-        subDirs: e.subDirs,
-        addToCommunityPlugins: e.addToCommunityPlugins,
-      })),
+      vaults: [] as Array<{
+        name: string;
+        plugins: Array<{ id: string; name: string; version: string }>;
+        directories: string[];
+        settings: string[];
+        syncDataJson: boolean;
+        plan: Array<{
+          plugin: string;
+          filesToCopy: string[];
+          filesToSkip: string[];
+          subDirs: string[];
+          addToCommunityPlugins: boolean;
+        }>;
+      }>,
     };
+
+    for (const { vault, config: vaultConfig, finalDirs } of vaultPlans) {
+      const selectedPlugins = allPlugins.filter((pl) => vaultConfig.pluginIds.includes(pl.id));
+      const plan = await buildSyncPlan({
+        vaults: [vault],
+        plugins: allPlugins,
+        pluginIds: vaultConfig.pluginIds,
+        dirs: finalDirs,
+        settings: vaultConfig.settings,
+        syncDataJson: vaultConfig.syncDataJson,
+      });
+      output.vaults.push({
+        name: vault.name,
+        plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
+        directories: finalDirs,
+        settings: vaultConfig.settings,
+        syncDataJson: vaultConfig.syncDataJson,
+        plan: plan.map((e) => ({
+          plugin: e.plugin.id,
+          filesToCopy: e.filesToCopy,
+          filesToSkip: e.filesToSkip,
+          subDirs: e.subDirs,
+          addToCommunityPlugins: e.addToCommunityPlugins,
+        })),
+      });
+    }
     console.log(JSON.stringify(output, null, 2));
     return;
   }
 
-  const result = await executeSync({
-    vaults: selectedVaults,
-    plugins: allPlugins,
-    pluginIds: selectedPluginIds,
-    dirs: finalDirs,
-    settings: selectedSettings,
-    syncDataJson,
-  });
+  // Execute per vault
+  const allPreReports: SyncPreReport[] = [];
+  const allPostReports: SyncPostReport[] = [];
+
+  for (const { vault, config: vaultConfig, finalDirs } of vaultPlans) {
+    const result = await executeSync({
+      vaults: [vault],
+      plugins: allPlugins,
+      pluginIds: vaultConfig.pluginIds,
+      dirs: finalDirs,
+      settings: vaultConfig.settings,
+      syncDataJson: vaultConfig.syncDataJson,
+    });
+    allPreReports.push(...result.preReports);
+    allPostReports.push(...result.postReports);
+  }
 
   if (args.json) {
     console.log(JSON.stringify({
       templateVersion,
-      preSync: result.preReports.map((r) => ({
+      preSync: allPreReports.map((r) => ({
         vault: r.vault.name,
         inSync: r.inSync,
         total: r.total,
       })),
-      postSync: result.postReports.map(({ vault, results }) => ({
+      postSync: allPostReports.map(({ vault, results }) => ({
         vault: vault.name,
         allMatch: results.every((r) => r.status === 'in sync'),
         items: results.map(({ kind, id, label, status, templateVersion, vaultVersion, files }) => ({
@@ -182,8 +192,11 @@ async function main() {
       })),
     }, null, 2));
   } else {
-    console.log(`Synced ${selectedPlugins.length} plugin(s), ${finalDirs.length} director${finalDirs.length === 1 ? 'y' : 'ies'}, and ${selectedSettings.length} setting(s) across ${selectedVaults.length} vault(s).`);
-    for (const { vault, results } of result.postReports) {
+    console.log(`Synced across ${selectedVaults.length} vault(s):`);
+    for (const { vault, config: vaultConfig, finalDirs } of vaultPlans) {
+      console.log(`  ${vault.name}: ${vaultConfig.pluginIds.length} plugin(s), ${finalDirs.length} director${finalDirs.length === 1 ? 'y' : 'ies'}, ${vaultConfig.settings.length} setting(s)`);
+    }
+    for (const { vault, results } of allPostReports) {
       const notMatching = results.filter((r) => r.status !== 'in sync');
       if (notMatching.length === 0) {
         console.log(`  ✓ ${vault.name}: all ${results.length} synced item(s) match the template.`);

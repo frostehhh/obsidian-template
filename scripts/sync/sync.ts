@@ -6,6 +6,7 @@ import {
   cancel,
   multiselectWithToggle,
   loadConfig,
+  loadVaultConfig,
   discoverPlugins,
   discoverVaults,
   selectVaults,
@@ -15,7 +16,7 @@ import {
   renderReport,
 } from '../lib/cli.ts';
 import { listItems } from '../lib/compare.ts';
-import { executeSync, buildSyncPlan } from '../lib/sync.ts';
+import { executeSync, buildSyncPlan, resolveVaultConfig } from '../lib/sync.ts';
 import type { VaultReport } from '../lib/types.ts';
 
 function parseArgs() {
@@ -71,13 +72,13 @@ async function main() {
   }
 
   let selectedVaults;
-  let selectedPluginIds: string[];
-  let selectedDirs: string[];
-  let selectedSettings: string[];
-  let syncDataJson: boolean;
+  let selectedPluginIds: string[] = [];
+  let selectedDirs: string[] = [];
+  let selectedSettings: string[] = [];
+  let syncDataJson = false;
 
   if (args.nonInteractive) {
-    // Non-interactive mode: resolve from args and config
+    // Non-interactive mode: resolve from args, vault-level config, and repo config
     if (args.vaults) {
       selectedVaults = [];
       for (const name of args.vaults) {
@@ -94,31 +95,6 @@ async function main() {
     } else {
       selectedVaults = vaults;
     }
-
-    if (args.plugins) {
-      selectedPluginIds = args.plugins;
-      const unknown = selectedPluginIds.filter((id) => !plugins.find((p) => p.id === id));
-      if (unknown.length > 0) {
-        console.error(`Unknown plugin(s): ${unknown.join(', ')}`);
-        process.exit(1);
-      }
-    } else {
-      selectedPluginIds = config.defaultPlugins ?? [];
-    }
-
-    if (args.dirs) {
-      selectedDirs = args.dirs;
-    } else {
-      selectedDirs = config.defaultDirs ?? ['--Attachments--', '--Configurations--/Obsidian Template', 'Bases', 'Notes'];
-    }
-
-    if (args.settings) {
-      selectedSettings = args.settings;
-    } else {
-      selectedSettings = config.defaultSettings ?? [];
-    }
-
-    syncDataJson = args.dataJson || (config.syncDataJson ?? false);
   } else {
     // Interactive mode
     p.intro(`  sync  —  Obsidian Template Vault  (template ${templateVersion})`);
@@ -246,38 +222,96 @@ async function main() {
     selectedDirs = finalDirsInteractive;
   }
 
-  const autoDirs = PLUGIN_DIR_CONDITIONS
-    .filter((c) => selectedPluginIds.includes(c.pluginId))
-    .map((c) => c.dir);
-  const finalDirs = [...new Set([...selectedDirs, ...autoDirs])];
+  // Build per-vault plans
+  let vaultPlans: Array<{
+    vault: (typeof selectedVaults)[number];
+    pluginIds: string[];
+    dirs: string[];
+    settings: string[];
+    syncDataJson: boolean;
+  }>;
 
-  const selectedPlugins = plugins.filter((pl) => selectedPluginIds.includes(pl.id));
+  if (args.nonInteractive) {
+    vaultPlans = await Promise.all(selectedVaults.map(async (vault) => {
+      const vaultConfig = await loadVaultConfig(vault.root);
+      const resolved = resolveVaultConfig(vaultConfig, config, {
+        plugins: args.plugins,
+        dirs: args.dirs,
+        settings: args.settings,
+        dataJson: args.dataJson,
+      });
 
-  if (args.dryRun) {
-    const plan = await buildSyncPlan({
-      vaults: selectedVaults,
-      plugins,
+      const unknown = resolved.pluginIds.filter((id) => !plugins.find((p) => p.id === id));
+      if (unknown.length > 0) {
+        console.error(`Vault ${vault.name}: unknown plugin(s): ${unknown.join(', ')}`);
+        process.exit(1);
+      }
+
+      const autoDirs = PLUGIN_DIR_CONDITIONS
+        .filter((c) => resolved.pluginIds.includes(c.pluginId))
+        .map((c) => c.dir);
+      const finalDirs = [...new Set([...resolved.dirs, ...autoDirs])];
+
+      return { vault, ...resolved, dirs: finalDirs };
+    }));
+  } else {
+    const autoDirs = PLUGIN_DIR_CONDITIONS
+      .filter((c) => selectedPluginIds.includes(c.pluginId))
+      .map((c) => c.dir);
+    const finalDirs = [...new Set([...selectedDirs, ...autoDirs])];
+    vaultPlans = selectedVaults.map((vault) => ({
+      vault,
       pluginIds: selectedPluginIds,
       dirs: finalDirs,
       settings: selectedSettings ?? [],
       syncDataJson,
-    });
+    }));
+  }
+
+  if (args.dryRun) {
     const output = {
       templateVersion,
-      vaults: selectedVaults.map((v) => v.name),
-      plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
-      directories: finalDirs,
-      settings: selectedSettings ?? [],
-      syncDataJson,
-      plan: plan.map((e) => ({
-        vault: e.vault.name,
-        plugin: e.plugin.id,
-        filesToCopy: e.filesToCopy,
-        filesToSkip: e.filesToSkip,
-        subDirs: e.subDirs,
-        addToCommunityPlugins: e.addToCommunityPlugins,
-      })),
+      vaults: [] as Array<{
+        name: string;
+        plugins: Array<{ id: string; name: string; version: string }>;
+        directories: string[];
+        settings: string[];
+        syncDataJson: boolean;
+        plan: Array<{
+          plugin: string;
+          filesToCopy: string[];
+          filesToSkip: string[];
+          subDirs: string[];
+          addToCommunityPlugins: boolean;
+        }>;
+      }>,
     };
+
+    for (const { vault, pluginIds, dirs, settings, syncDataJson: vaultSyncDataJson } of vaultPlans) {
+      const selectedPlugins = plugins.filter((pl) => pluginIds.includes(pl.id));
+      const plan = await buildSyncPlan({
+        vaults: [vault],
+        plugins,
+        pluginIds,
+        dirs,
+        settings,
+        syncDataJson: vaultSyncDataJson,
+      });
+      output.vaults.push({
+        name: vault.name,
+        plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
+        directories: dirs,
+        settings,
+        syncDataJson: vaultSyncDataJson,
+        plan: plan.map((e) => ({
+          plugin: e.plugin.id,
+          filesToCopy: e.filesToCopy,
+          filesToSkip: e.filesToSkip,
+          subDirs: e.subDirs,
+          addToCommunityPlugins: e.addToCommunityPlugins,
+        })),
+      });
+    }
     console.log(JSON.stringify(output, null, 2));
     return;
   }
@@ -285,14 +319,20 @@ async function main() {
   const s = p.spinner?.() ?? { start: () => {}, stop: () => {}, message: () => {} };
   if (!args.nonInteractive) s.start('Syncing...');
 
-  const result = await executeSync({
-    vaults: selectedVaults,
-    plugins,
-    pluginIds: selectedPluginIds,
-    dirs: finalDirs,
-    settings: selectedSettings ?? [],
-    syncDataJson,
-  });
+  const allPreReports = [];
+  const allPostReports = [];
+  for (const { vault, pluginIds, dirs, settings, syncDataJson: vaultSyncDataJson } of vaultPlans) {
+    const result = await executeSync({
+      vaults: [vault],
+      plugins,
+      pluginIds,
+      dirs,
+      settings,
+      syncDataJson: vaultSyncDataJson,
+    });
+    allPreReports.push(...result.preReports);
+    allPostReports.push(...result.postReports);
+  }
 
   if (!args.nonInteractive) s.stop('Sync complete.');
 
@@ -300,12 +340,12 @@ async function main() {
   if (args.json) {
     console.log(JSON.stringify({
       templateVersion,
-      preSync: result.preReports.map((r) => ({
+      preSync: allPreReports.map((r) => ({
         vault: r.vault.name,
         inSync: r.inSync,
         total: r.total,
       })),
-      postSync: result.postReports.map(({ vault, results }) => ({
+      postSync: allPostReports.map(({ vault, results }) => ({
         vault: vault.name,
         allMatch: results.every((r) => r.status === 'in sync'),
         items: results.map(({ kind, id, label, status, templateVersion, vaultVersion, files }) => ({
@@ -321,9 +361,12 @@ async function main() {
     }, null, 2));
   } else {
     if (args.nonInteractive) {
-      console.log(`Synced ${selectedPlugins.length} plugin(s), ${finalDirs.length} director${finalDirs.length === 1 ? 'y' : 'ies'}, and ${(selectedSettings ?? []).length} setting(s) across ${selectedVaults.length} vault(s).`);
+      const totalPlugins = vaultPlans.reduce((sum, vp) => sum + vp.pluginIds.length, 0);
+      const totalDirs = vaultPlans.reduce((sum, vp) => sum + vp.dirs.length, 0);
+      const totalSettings = vaultPlans.reduce((sum, vp) => sum + vp.settings.length, 0);
+      console.log(`Synced ${totalPlugins} plugin(s), ${totalDirs} director${totalDirs === 1 ? 'y' : 'ies'}, and ${totalSettings} setting(s) across ${selectedVaults.length} vault(s).`);
     }
-    for (const { vault, results } of result.postReports) {
+    for (const { vault, results } of allPostReports) {
       const notMatching = results.filter((r) => r.status !== 'in sync');
       if (notMatching.length === 0) {
         const msg = `${vault.name}: all ${results.length} synced item(s) now match the template.`;
@@ -346,8 +389,11 @@ async function main() {
   }
 
   if (!args.nonInteractive) {
+    const totalPlugins = vaultPlans.reduce((sum, vp) => sum + vp.pluginIds.length, 0);
+    const totalDirs = vaultPlans.reduce((sum, vp) => sum + vp.dirs.length, 0);
+    const totalSettings = vaultPlans.reduce((sum, vp) => sum + vp.settings.length, 0);
     p.outro(
-      `Done! Synced ${selectedPlugins.length} plugin(s), ${finalDirs.length} director${finalDirs.length === 1 ? 'y' : 'ies'}, and ${(selectedSettings ?? []).length} setting(s) across ${selectedVaults.length} vault(s). Template ${templateVersion}.`
+      `Done! Synced ${totalPlugins} plugin(s), ${totalDirs} director${totalDirs === 1 ? 'y' : 'ies'}, and ${totalSettings} setting(s) across ${selectedVaults.length} vault(s). Template ${templateVersion}.`
     );
   }
 }

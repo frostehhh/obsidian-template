@@ -99,6 +99,16 @@ export async function loadConfig(): Promise<SyncConfig> {
   }
 }
 
+export async function loadVaultConfig(vaultRoot: string): Promise<SyncConfig> {
+  const vaultConfigPath = join(vaultRoot, '.obsidian', 'sync.config.json');
+  try {
+    return JSON.parse(await readFile(vaultConfigPath, 'utf8'));
+  } catch {
+    // No vault-level config
+    return {};
+  }
+}
+
 // Plugins listed in state.json, with name and version read live from each manifest.
 export async function discoverPlugins(): Promise<PluginInfo[]> {
   const plugins: PluginInfo[] = [];
