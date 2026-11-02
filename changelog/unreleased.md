@@ -10,6 +10,8 @@ Breaking changes need a **Migration** note. -->
 - Add `scripts/agent/sync.ts`, `scripts/agent/compare.ts`, `scripts/agent/release.ts`, `scripts/agent/state.ts` as thin non-interactive wrappers
 - Add `scripts/lib/sync.ts` and `scripts/lib/release.ts` shared libraries containing the core logic
 - Register `agent:sync`, `agent:compare`, `agent:release`, `agent:state` tasks in `mise.toml`
+- Add QuickAdd macro "TaskNote - Create task for project" that finds a project note (tags `task` + `project`) in the current or parent directories and creates a linked task under its `Tasks/` subfolder
+- Add QuickAdd macro "TaskNote - Set current note as project" that adds `task` and `project` tags to the active note's frontmatter
 
 ## Changed
 

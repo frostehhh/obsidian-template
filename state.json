@@ -178,6 +178,7 @@
       }
     ],
     "excluded": [
+      "--Configurations--",
       "Knowledge Confidence"
     ]
   },
