@@ -12,3 +12,5 @@ Breaking changes need a **Migration** note. -->
 ## Changed
 
 - Agent and non-interactive sync scripts now read vault-level config with priority: CLI flags > vault-level config > repo-level `sync.config.json`
+- Rename QuickAdd macros "TaskNote - Create task for project" and "TaskNote - Set current note as project" to use the "TaskNotes - " prefix
+  - **Migration:** re-sync QuickAdd (`mise run sync`) or rename the two macros by hand in existing vaults

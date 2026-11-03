@@ -42,12 +42,12 @@
     },
     {
       "id": "bbdaa339-0270-4864-b79a-4c072d530b9d",
-      "name": "TaskNote - Create task for project",
+      "name": "TaskNotes - Create task for project",
       "type": "Macro",
       "command": true,
       "runOnStartup": false,
       "macro": {
-        "name": "TaskNote - Create task for project",
+        "name": "TaskNotes - Create task for project",
         "id": "147bba56-e831-4393-a16c-f0bdd453e912",
         "commands": [
           {
@@ -62,12 +62,12 @@
     },
     {
       "id": "0ab19b51-7576-4944-997c-a6293029f60e",
-      "name": "TaskNote - Set current note as project",
+      "name": "TaskNotes - Set current note as project",
       "type": "Macro",
       "command": true,
       "runOnStartup": false,
       "macro": {
-        "name": "TaskNote - Set current note as project",
+        "name": "TaskNotes - Set current note as project",
         "id": "cd1c04af-cb46-4eb8-ab9f-438753945396",
         "commands": [
           {
