@@ -3,15 +3,3 @@
 <!-- One line per user-visible change, added in the same commit as the change.
 Group under Added / Changed / Deprecated / Removed / Fixed / Security.
 Breaking changes need a **Migration** note. -->
-
-## Added
-
-- Add per-vault sync configuration via `.obsidian/sync.config.json` in each vault
-- Add `resolveVaultConfig()` and `loadVaultConfig()` utilities for vault-level config resolution
-
-## Changed
-
-- Agent and non-interactive sync scripts now read vault-level config with priority: CLI flags > vault-level config > repo-level `sync.config.json`
-- Rename QuickAdd macros "TaskNote - Create task for project" and "TaskNote - Set current note as project" to use the "TaskNotes - " prefix
-  - **Migration:** re-sync QuickAdd (`mise run sync`) or rename the two macros by hand in existing vaults
-- "TaskNotes - Create task for project" now shows the project name in the title prompt (`Task title for "<project>"`) and in the confirmation notice instead of the relative folder path. Re-sync QuickAdd (`mise run sync`) to get it
