@@ -131,7 +131,7 @@ async function createTaskForProject(app, projectFile, { title, noun = "task" }) 
     });
   }
 
-  new Notice(`Created ${noun} "${title}" in "${folder}"`);
+  new Notice(`Created ${noun} "${title}" for project "${projectFile.basename}"`);
   return movedFile;
 }
 

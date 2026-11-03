@@ -86,7 +86,7 @@ module.exports = async (params) => {
     return;
   }
 
-  const taskTitle = await quickAddApi.inputPrompt("Task title");
+  const taskTitle = await quickAddApi.inputPrompt(`Task title for "${project.basename}"`);
   if (!taskTitle) return;
 
   const movedFile = await createTaskForProject(app, project, { title: taskTitle });
