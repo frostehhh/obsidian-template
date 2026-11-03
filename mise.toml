@@ -1,3 +1,6 @@
+[tools]
+node = "26.8.2"
+
 [tasks.release]
 description = "Cut a template release: mise run release <patch|minor|major|x.y.z> [--dry-run]"
 run = "node scripts/release/release.ts"
