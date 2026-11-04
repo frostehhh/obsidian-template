@@ -182,7 +182,7 @@
     }
   ],
   "inputPrompt": "single-line",
-  "persistInputPromptDrafts": true,
+  "persistInputPromptDrafts": false,
   "useSelectionAsCaptureValue": true,
   "devMode": false,
   "templateFolderPath": "",
