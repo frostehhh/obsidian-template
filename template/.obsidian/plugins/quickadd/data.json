@@ -44,7 +44,7 @@
       "id": "bbdaa339-0270-4864-b79a-4c072d530b9d",
       "name": "TaskNotes - Create task for project",
       "type": "Macro",
-      "command": true,
+      "command": false,
       "runOnStartup": false,
       "macro": {
         "name": "TaskNotes - Create task for project",
@@ -64,7 +64,7 @@
       "id": "0ab19b51-7576-4944-997c-a6293029f60e",
       "name": "TaskNotes - Set current note as project",
       "type": "Macro",
-      "command": true,
+      "command": false,
       "runOnStartup": false,
       "macro": {
         "name": "TaskNotes - Set current note as project",
