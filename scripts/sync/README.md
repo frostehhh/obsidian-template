@@ -126,7 +126,30 @@ The full design is in [docs/specs/sync-versioning.md](../../docs/specs/sync-vers
   Files that exist only in the vault are never touched. Local overrides count as in sync.
 - **Conflicts.** `--on-conflict skip` (default) leaves the file and reports it again next run, and non-interactive runs exit 1. `take-template` applies the template version. `keep-vault` keeps the vault file and records it as a local override.
 - **Vaults without a lock.** Existing files that differ are conflicts. `--assume <version>` reads the base from that tag, so a vault known to be at 0.2.0 updates cleanly: `mise run sync -- --assume v0.2.0`.
-- **Data files** (`data.json`, `genericPreviewCache.json`) are copied only when missing, overwritten with `--data-json`, and never recorded in the lock.
+- **Data files** (`data.json`, `genericPreviewCache.json`) are copied only when missing and never recorded in the lock. With `--data-json`, a plugin's `data.json` is merged key by key (see below) instead of overwritten.
+
+### Merging `data.json`
+
+`--data-json` (or `syncDataJson: true`) merges the template's `data.json` into the vault's, using the template version it was last merged from (read from git) as the base:
+
+- Template changes since that version arrive; settings you changed in the vault stay; a key the template removed is removed only if you left it alone.
+- Arrays of objects with an `id` (QuickAdd choices) merge by id, so your own macros survive and upstream renames still apply. Other arrays and values are replaced as a whole.
+- A key changed differently on both sides is a conflict, listed as `data.json [path.to.key]`. `--on-conflict` decides: `skip` keeps your value and reports it (exit 1), `keep-vault` keeps it, `take-template` takes the template's.
+- The first merge into a vault that was synced before (no recorded base) treats every differing key as a conflict. Resolve once with `--on-conflict keep-vault|take-template`, or pass `--assume <version>` if you know which version the file came from.
+
+### Patches
+
+A vault can keep deliberate deviations from the template as JSON merge patches in its `sync.config.json`:
+
+```json
+{ "patches": { ".obsidian/plugins/quickadd/data.json": { "persistInputPromptDrafts": true } } }
+```
+
+They are reapplied after every sync (objects merge, `null` deletes a key, arrays replace), skip missing files and protected paths, and settle any merge conflict under the keys they name.
+
+### Migrations
+
+Changes that file sync cannot express (renaming a key inside `data.json`, moving a file) ship as `migrations/<version>.ts` in the template repo; see [migrations/README.md](../../migrations/README.md). Sync runs, in order, every migration up to the version it syncs to that the vault has not run yet, and records them in the lock. `--dry-run` and `--plan` list them as `migrations`, and their log lines are printed after the sync. A vault with no lock runs none (use `--assume <version>` to say where it is); protected paths are never touched by a migration.
 
 ### Saved plans
 
@@ -134,7 +157,7 @@ The full design is in [docs/specs/sync-versioning.md](../../docs/specs/sync-vers
 
 New files are staged next to their destination and renamed into place only when every write succeeded; the lock is written last.
 
-### Vault policy: `protect`, `exclude`, `pin`
+### Vault policy: `protect`, `exclude`, `pin` (and `patches`)
 
 Besides the `default*` keys, `.obsidian/sync.config.json` (and the repo-level `sync.config.json`) accept:
 

@@ -42,6 +42,17 @@ export function hasEntries(markdown: string): boolean {
   return /^\s*[-*]\s+\S/m.test(withoutComments);
 }
 
+// A changelog entry with a **Migration** note says existing vaults need steps. Sync can run those steps itself
+// (migrations/<version>.ts), so the release must either ship that file or say the steps are manual with
+// <!-- migrations: none --> somewhere in the changelog. Returns an error message, or null when fine.
+export function migrationProblem(version: string, changelog: string, hasMigrationFile: boolean): string | null {
+  const visible = changelog.replace(/<!--[\s\S]*?-->/g, '');
+  if (!/\*\*Migration/i.test(visible)) return null;
+  if (hasMigrationFile) return null;
+  if (/<!--\s*migrations:\s*none\s*-->/i.test(changelog)) return null;
+  return `The changelog has a **Migration** entry, but migrations/${version}.ts does not exist. Add the migration (see migrations/README.md), or add <!-- migrations: none --> to the changelog if the steps are manual.`;
+}
+
 export interface ReleaseValidation {
   valid: boolean;
   error?: string;
@@ -108,6 +119,10 @@ export async function validateReleaseAsync(target: string): Promise<ReleaseValid
   if (!baseline && !unreleasedHasEntries) {
     return { ...validation, valid: false, error: 'changelog/unreleased.md has no entries. Describe the changes before releasing.', baseline, unreleasedHasEntries };
   }
+
+  const changelog = baseline ? await readFile(releaseFile, 'utf8') : unreleased;
+  const migration = migrationProblem(validation.version, changelog, await pathExists(join(REPO_ROOT, 'migrations', `${validation.version}.ts`)));
+  if (migration) return { ...validation, valid: false, error: migration, baseline, unreleasedHasEntries };
 
   const date = new Date().toLocaleDateString('en-CA');
   const steps = [

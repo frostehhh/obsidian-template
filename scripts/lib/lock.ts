@@ -1,5 +1,6 @@
 import { readFile, writeFile, rename, mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
+import { compareVersions, parseVersion } from './semver.ts';
 import type { Item, Lock, Vault } from './types.ts';
 
 export const LOCK_FILE = 'template.lock.json';
@@ -41,8 +42,16 @@ export function serializeLock(lock: Lock): string {
     items: sortedObject(lock.items, (item) => ({
       templateVersion: item.templateVersion,
       files: sortedObject(item.files),
+      ...(item.dataVersion ? { dataVersion: item.dataVersion } : {}),
     })),
   };
+  if (lock.migrations) {
+    sorted.migrations = [...new Set(lock.migrations)].sort((a, b) => {
+      const pa = parseVersion(a);
+      const pb = parseVersion(b);
+      return pa && pb ? compareVersions(pa, pb) : a < b ? -1 : 1;
+    });
+  }
   return `${JSON.stringify(sorted, null, 2)}\n`;
 }
 

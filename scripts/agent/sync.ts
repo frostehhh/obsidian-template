@@ -10,7 +10,7 @@ import { resolveSource, gitSource } from '../lib/source.ts';
 import { loadPolicy } from '../lib/policy.ts';
 import { writePlanFile, applyPlanFile, appliedToJson, renderApplied, summarizePlan } from '../lib/planfile.ts';
 import type { PlannedVault } from '../lib/planfile.ts';
-import { executeSync, buildSyncPlan, describePlan, resolveVaultConfig } from '../lib/sync.ts';
+import { executeSync, buildSyncPlan, buildVaultExtras, conflictLabel, describePlan, resolveVaultConfig } from '../lib/sync.ts';
 import type { SyncPreReport, SyncPostReport, SyncConflict } from '../lib/sync.ts';
 import type { Vault } from '../lib/types.ts';
 
@@ -137,6 +137,8 @@ async function main() {
         directories: string[];
         settings: string[];
         syncDataJson: boolean;
+        migrations: string[];
+        patches: string[];
         plan: ReturnType<typeof describePlan>;
       }>,
     };
@@ -153,8 +155,11 @@ async function main() {
         source: vaultSource,
         assume,
       });
-      planned.push({ vault, source: vaultSource, plan });
+      const extras = await buildVaultExtras(vault, vaultSource, assume);
+      planned.push({ vault, source: vaultSource, plan, extras });
       output.vaults.push({
+        migrations: extras.migrations,
+        patches: Object.keys(extras.patches),
         name: vault.name,
         plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
         directories: finalDirs,
@@ -177,6 +182,7 @@ async function main() {
   const allPreReports: SyncPreReport[] = [];
   const allPostReports: SyncPostReport[] = [];
   const allConflicts: SyncConflict[] = [];
+  const allNotes: string[] = [];
 
   for (const { vault, config: vaultConfig, finalDirs, source: vaultSource } of vaultPlans) {
     const result = await executeSync({
@@ -193,6 +199,7 @@ async function main() {
     allPreReports.push(...result.preReports);
     allPostReports.push(...result.postReports);
     allConflicts.push(...result.conflicts);
+    allNotes.push(...result.notes.map((n) => `${vault.name}: ${n}`));
   }
 
   if (args.json) {
@@ -223,7 +230,8 @@ async function main() {
           },
         })),
       })),
-      conflicts: allConflicts.map((c) => ({ vault: c.vault.name, kind: c.item.kind, id: c.item.id, file: c.file })),
+      conflicts: allConflicts.map((c) => ({ vault: c.vault.name, kind: c.item.kind, id: c.item.id, file: c.file, detail: c.detail })),
+      notes: allNotes,
     }, null, 2));
   } else {
     console.log(`Synced across ${selectedVaults.length} vault(s):`);
@@ -243,8 +251,9 @@ async function main() {
     }
     if (allConflicts.length > 0) {
       console.log(`  ${allConflicts.length} conflict(s) left untouched (re-run with --on-conflict take-template|keep-vault):`);
-      for (const c of allConflicts) console.log(`      ${c.vault.name}: ${c.item.kind} ${c.item.label}: ${c.file || c.item.id}`);
+      for (const c of allConflicts) console.log(`      ${c.vault.name}: ${c.item.kind} ${c.item.label}: ${conflictLabel(c)}`);
     }
+    for (const note of allNotes) console.log(`  ${note}`);
   }
 
   if (allConflicts.length > 0) process.exitCode = 1;

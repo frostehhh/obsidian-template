@@ -10,6 +10,8 @@ export interface Policy {
   protect: string[];
   exclude: string[];
   pin: string | undefined;
+  // JSON merge patches by vault-relative path; the vault's patch for a path replaces the repo's
+  patches: Record<string, unknown>;
   isProtected(vaultRelPath: string): boolean;
   isExcluded(item: Item): boolean;
 }
@@ -22,12 +24,19 @@ export function mergePolicy(vaultConfig: SyncConfig, repoConfig: SyncConfig): Po
   if (pin !== undefined && !isValidRange(pin)) {
     throw new Error(`Invalid pin "${pin}". Use a version like 0.3.1, 0.2.x, ^0.3.0 or ~0.3.0.`);
   }
+  const patches = { ...(repoConfig.patches ?? {}), ...(vaultConfig.patches ?? {}) };
+  for (const [path, patch] of Object.entries(patches)) {
+    if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) {
+      throw new Error(`Invalid patch for ${path}: a patch must be a JSON object.`);
+    }
+  }
   const excluded = new Set(exclude.map((e) => e.toLowerCase()));
   const matchProtected = createMatcher(protect);
   return {
     protect,
     exclude,
     pin,
+    patches,
     isProtected: matchProtected,
     isExcluded: (item) => excluded.has(itemKey(item).toLowerCase()),
   };

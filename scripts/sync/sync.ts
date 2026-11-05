@@ -21,7 +21,7 @@ import { resolveSource, gitSource } from '../lib/source.ts';
 import { loadPolicy } from '../lib/policy.ts';
 import { writePlanFile, applyPlanFile, appliedToJson, renderApplied, summarizePlan } from '../lib/planfile.ts';
 import type { PlannedVault } from '../lib/planfile.ts';
-import { executeSync, buildSyncPlan, describePlan, resolveVaultConfig } from '../lib/sync.ts';
+import { executeSync, buildSyncPlan, buildVaultExtras, conflictLabel, describePlan, resolveVaultConfig } from '../lib/sync.ts';
 import type { Vault, VaultReport } from '../lib/types.ts';
 
 function parseArgs() {
@@ -278,6 +278,8 @@ async function main() {
         directories: string[];
         settings: string[];
         syncDataJson: boolean;
+        migrations: string[];
+        patches: string[];
         plan: ReturnType<typeof describePlan>;
       }>,
     };
@@ -295,8 +297,11 @@ async function main() {
         source: vaultSource,
         assume,
       });
-      planned.push({ vault, source: vaultSource, plan });
+      const extras = await buildVaultExtras(vault, vaultSource, assume);
+      planned.push({ vault, source: vaultSource, plan, extras });
       output.vaults.push({
+        migrations: extras.migrations,
+        patches: Object.keys(extras.patches),
         name: vault.name,
         plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
         directories: dirs,
@@ -324,6 +329,7 @@ async function main() {
   const allPreReports = [];
   const allPostReports = [];
   const allConflicts = [];
+  const allNotes: string[] = [];
   for (const { vault, pluginIds, dirs, settings, syncDataJson: vaultSyncDataJson } of vaultPlans) {
     const result = await executeSync({
       vaults: [vault],
@@ -339,6 +345,7 @@ async function main() {
     allPreReports.push(...result.preReports);
     allPostReports.push(...result.postReports);
     allConflicts.push(...result.conflicts);
+    allNotes.push(...result.notes.map((n) => `${vault.name}: ${n}`));
   }
 
   if (!args.nonInteractive) s.stop('Sync complete.');
@@ -372,7 +379,8 @@ async function main() {
           },
         })),
       })),
-      conflicts: allConflicts.map((c) => ({ vault: c.vault.name, kind: c.item.kind, id: c.item.id, file: c.file })),
+      conflicts: allConflicts.map((c) => ({ vault: c.vault.name, kind: c.item.kind, id: c.item.id, file: c.file, detail: c.detail })),
+      notes: allNotes,
     }, null, 2));
   } else {
     if (args.nonInteractive) {
@@ -402,10 +410,14 @@ async function main() {
       }
     }
     if (allConflicts.length > 0) {
-      const lines = allConflicts.map((c) => `${c.vault.name}: ${c.item.kind} ${c.item.label}: ${c.file || c.item.id}`);
+      const lines = allConflicts.map((c) => `${c.vault.name}: ${c.item.kind} ${c.item.label}: ${conflictLabel(c)}`);
       const message = `${allConflicts.length} conflict(s) left untouched (changed in both the vault and the template). Re-run with --on-conflict take-template|keep-vault:\n${lines.map((l) => `  ${l}`).join('\n')}`;
       if (args.nonInteractive) console.log(message);
       else p.log.warn(message);
+    }
+    if (allNotes.length > 0) {
+      if (args.nonInteractive) for (const note of allNotes) console.log(`  ${note}`);
+      else p.log.info(allNotes.join('\n'));
     }
   }
 

@@ -72,6 +72,15 @@ export function workingTreeSource(): TemplateSource {
       return out;
     },
     read: (rel, file) => readFile(join(TEMPLATE, rel, file)),
+    async listRepo(dir) {
+      try {
+        const entries = await readdir(join(REPO, dir), { withFileTypes: true });
+        return entries.filter((e) => e.isFile()).map((e) => e.name).sort();
+      } catch {
+        return [];
+      }
+    },
+    readRepo: (path) => readFile(join(REPO, path)),
   };
 }
 
@@ -117,6 +126,21 @@ export function gitSource(ref: string, version?: string): TemplateSource {
       const sha = loadTree().get(path);
       if (!sha) throw new Error(`${path} does not exist in template at ${ref}`);
       return git(['cat-file', 'blob', sha]);
+    },
+    async listRepo(dir) {
+      const out = git(['ls-tree', '-z', '--name-only', ref, `${dir}/`]).toString('utf8');
+      return out
+        .split('\0')
+        .filter(Boolean)
+        .map((path) => path.slice(dir.length + 1))
+        .sort();
+    },
+    async readRepo(path) {
+      try {
+        return git(['show', `${ref}:${path}`]);
+      } catch {
+        throw new Error(`${path} does not exist at ${ref}`);
+      }
     },
   };
 }

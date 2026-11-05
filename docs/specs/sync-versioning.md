@@ -1,6 +1,6 @@
 # Sync versioning
 
-Status: phases 1 and 2 implemented (tag source, lock file, three-way reconcile, vault policy, saved plans). Phase 3 is planned.
+Status: all three phases implemented (tag source, lock file, three-way reconcile, vault policy, saved plans, migrations, `data.json` merge, patches).
 
 ## Goals
 
@@ -29,15 +29,18 @@ Every file is identified by its git blob hash (`sha1("blob <size>\0" + content)`
   "items": {
     "plugin:quickadd": {
       "templateVersion": "0.3.1",
+      "dataVersion": "0.3.1",
       "files": { "main.js": "<hash>", "manifest.json": "<hash>" }
     }
-  }
+  },
+  "migrations": ["0.3.2", "0.4.0"]
 }
 ```
 
 - Keys and file paths are sorted and there are no timestamps, so identical inputs give identical bytes.
 - The version is per item, because a vault may sync some items more often than others.
-- Plugin `data.json` and `genericPreviewCache.json` are never recorded (see "Data files").
+- Plugin `data.json` and `genericPreviewCache.json` are never recorded in `files` (see "Data files"). `dataVersion` is the template version whose `data.json` was last merged into the vault's, and is the base of the next merge.
+- `migrations` lists the migrations already run on the vault (see "Migrations"). Locks written before migrations existed lack it.
 - Written last, atomically (temp file + rename). A failed run leaves the previous lock in place.
 
 ## Source
@@ -82,13 +85,21 @@ Consequences:
 
 ### Data files
 
-Plugin `data.json` and `genericPreviewCache.json` hold per-vault state. They are outside the three-way logic:
+Plugin `data.json` and `genericPreviewCache.json` hold per-vault state, so they sit outside the per-file logic and are never recorded in `files`:
 
-- Copied only when missing from the vault.
-- With `--data-json` (or `syncDataJson`) they are overwritten from the source.
-- Never recorded in the lock.
+- Both are copied when missing from the vault.
+- With `--data-json` (or `syncDataJson`), `data.json` is **merged key by key** instead of overwritten. `genericPreviewCache.json` is a cache and is never overwritten.
 
-Phase 3 replaces this with a key-level merge.
+The merge is three-way on the parsed JSON: base is the template's `data.json` at the lock item's `dataVersion` (read from git), template is the source, vault is the vault's file.
+
+- A side that did not change a key since the base never overrides the other side. So template changes arrive, the vault's own settings stay, and a key the template removed is removed only if the vault left it alone.
+- Objects merge key by key. Arrays whose elements are all objects with a unique string `id` (QuickAdd choices) merge by id: vault order first, new template elements appended. Other arrays and scalars are atomic.
+- A key changed on both sides, differently, is a conflict. It is listed as `data.json [path.to.key]` (for id-keyed arrays the id is a path segment). `--on-conflict` applies: `skip` keeps the vault value and reports, `keep-vault` keeps it silently, `take-template` takes the template value.
+- Keys decided by a vault patch (see "Patches") are never conflicts.
+- The file is written with the indentation and trailing newline it had.
+- Without a base (no `dataVersion`, no `--assume`, or the tag is not in this checkout) the base is empty: keys only in the template are added, keys only in the vault stay, and keys that differ conflict.
+- `dataVersion` moves to the synced version when the merge finishes without conflicts left to report, or when the conflict policy resolved them. With `skip` and conflicts it stays, so the conflicts come back next run.
+- If either side is not valid JSON, `data.json` is a whole-file conflict.
 
 ## Compare
 
@@ -116,6 +127,29 @@ Phase 3 replaces this with a key-level merge.
 
 Sync resolves the source per vault, so vaults with different pins can be synced in one run.
 
+### Patches
+
+```json
+{
+  "patches": {
+    ".obsidian/plugins/quickadd/data.json": { "persistInputPromptDrafts": true },
+    ".obsidian/app.json": { "vimMode": true }
+  }
+}
+```
+
+`patches` maps vault-relative paths to RFC 7386 JSON merge patches (objects merge, `null` deletes a key, arrays replace). They are the declared deviations of a vault: reapplied after every sync, after the files and the migrations, and idempotent. A file that is missing is skipped. Protected paths are never patched. When a repo patch and a vault patch name the same path, the vault's replaces the repo's. A patch also settles any `data.json` merge conflict under the keys it names.
+
+## Migrations
+
+For changes plain file sync cannot express (renaming a key inside `data.json`, moving a file the user owns), the template repo carries `migrations/<x.y.z>.ts`. The format and rules are in `migrations/README.md`: a self-contained, idempotent module exporting `description` and `run(ctx)`, where `ctx` offers vault-confined JSON and file helpers that skip protected paths.
+
+- **Source.** Migrations are read from the same git ref as the template, and loaded from a temp directory. Syncing a tag runs that tag's migrations.
+- **Which run.** The lock's `migrations` list is authoritative: everything at or below the target version that is not listed is pending, oldest first. A lock without that list takes the oldest item version as the baseline. A vault with no lock runs none and records all up to the target as done, unless `--assume <version>` supplies a baseline. Syncing an older tag runs nothing and never forgets recorded migrations. `--from working-tree` has no upper bound, for testing.
+- **When.** After files are in place and before the lock is written, followed by the patches. A failure leaves the old lock, and since migrations are idempotent a rerun is safe.
+- **Visibility.** `--dry-run` and `--plan` list them (`migrations`), `--apply` runs the listed ones from the pinned commit and fails the plan if one is missing there. Log lines come back as `notes`.
+- **Release check.** A changelog entry with a `**Migration**` note requires `migrations/<version>.ts` for that release, or `<!-- migrations: none -->` in the changelog to say the steps are manual. `mise run release` refuses otherwise.
+
 ## Plan and apply
 
 Sync builds a plan (per-file decisions per item) before writing anything.
@@ -130,10 +164,13 @@ Writes are staged: every new file is first written next to its destination as `<
 
 1. **Phase 1 (done):** tag source, lock, three-way reconcile with deletions, conflict policy, `--assume`, lock-aware compare.
 2. **Phase 2 (done):** vault config `protect`, `exclude` and `pin`; `--plan <file>` / `--apply <file>`; staged writes.
-3. **Phase 3:** `migrations/<version>.ts` executed in semver order for versions in (lock version, target], recorded in the lock; key-level `data.json` merge using the base from git; vault `patches` (JSON merge patches reapplied after every sync); release check that every changelog entry marked as migration has one.
+3. **Phase 3 (done):** `migrations/<version>.ts` run in semver order and recorded in the lock; key-level `data.json` merge with the base from git; vault `patches`; release check for changelog migration entries.
 
 ## Known limitations
 
 - `state.json` is read from the working tree, not from the source ref. An item removed from the template between versions is only cleaned up if it is still listed there.
 - Renames during the final rename step are not transactional. If the process dies in the middle of it, rerunning sync completes the job (the lock is still the old one).
-- `protect` and `exclude` have no CLI flags; they come from the config files only.
+- `protect`, `exclude` and `patches` have no CLI flags; they come from the config files only.
+- Migrations and patches run after the staged files are renamed, so they are not part of the all-or-nothing staging. They are idempotent, and the lock is written after them.
+- The `data.json` merge needs the base tag in the checkout. Without it, differing keys are conflicts rather than silently resolved.
+- Migrations are code from the template repo and run unsandboxed with the user's permissions. Only sync from a repo you trust.

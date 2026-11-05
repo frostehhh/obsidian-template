@@ -14,7 +14,7 @@ Obsidian template vault (`template/`) plus the tooling around it (`scripts/`). O
 
 Run through mise: `mise tasks` lists them. `sync`, `compare`, `state`, `release`, `typecheck`, `test`.
 
-Sync reads the template from a git tag and tracks versions in each vault's `.obsidian/template.lock.json`; the design is in `docs/specs/sync-versioning.md`. Update the spec when sync behavior changes.
+Sync reads the template from a git tag and tracks versions in each vault's `.obsidian/template.lock.json`; the design is in `docs/specs/sync-versioning.md`. Update the spec when sync behavior changes. A changelog entry with a **Migration** note needs `migrations/<version>.ts` (see `migrations/README.md`) or `<!-- migrations: none -->` in the changelog; `mise run release` enforces it.
 
 ## Git, changelog and releases
 

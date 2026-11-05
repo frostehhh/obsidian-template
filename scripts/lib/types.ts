@@ -34,6 +34,9 @@ export interface SyncConfig {
   exclude?: string[];
   // Version range the vault stays within ("0.2.x", "^0.3.0", "0.3.1"): default source is the highest matching tag.
   pin?: string;
+  // JSON merge patches (RFC 7386) keyed by vault-relative path, reapplied after every sync:
+  // { ".obsidian/plugins/quickadd/data.json": { "someSetting": false } }. null deletes a key.
+  patches?: Record<string, unknown>;
 }
 
 export interface Vault {
@@ -87,16 +90,23 @@ export interface TemplateSource {
   // Files under template/<rel>, relative to it, sorted. [''] when rel is a file, [] when it does not exist.
   list(rel: string): Promise<SourceFile[]>;
   read(rel: string, file: string): Promise<Buffer>;
+  // Repo files outside template/ (migrations/), read from the same ref. Paths are relative to the repo root.
+  listRepo(dir: string): Promise<string[]>;
+  readRepo(path: string): Promise<Buffer>;
 }
 
 export interface LockItem {
   templateVersion: string;
   files: Record<string, string>;
+  // Template version whose data.json was last merged into the vault's: the base of the next key-level merge.
+  dataVersion?: string;
 }
 
 export interface Lock {
   lockVersion: 1;
   items: Record<string, LockItem>;
+  // Versions of the migrations already run on this vault (absent in locks written before migrations existed).
+  migrations?: string[];
 }
 
 export interface VaultReport {

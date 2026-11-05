@@ -1,3 +1,4 @@
+import type { Merge3Result } from './jsonmerge.ts';
 import type { ConflictPolicy } from './types.ts';
 
 // Per-file outcome of a three-way comparison between
@@ -30,6 +31,9 @@ export interface FileDecision {
   vaultHash: string | undefined;
   // false for files outside the lock (plugin data files)
   tracked: boolean;
+  // Set for a plugin data.json merged key by key instead of copied: the merge result (conflicts resolved
+  // for the vault) and the keys where both sides changed
+  merge?: Merge3Result;
 }
 
 export type Effect = 'write' | 'delete' | 'none';
