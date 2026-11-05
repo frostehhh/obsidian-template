@@ -107,6 +107,73 @@ async function findProjectWithLookup(app, startDirPath, maxLevels = 2) {
   };
 }
 
+async function markAsProject(app, file) {
+  await app.fileManager.processFrontMatter(file, (fm) => {
+    const existing = fm.tags || [];
+    const tags = Array.isArray(existing) ? [...existing] : [existing];
+    if (!tags.includes("task")) tags.push("task");
+    if (!tags.includes("project")) tags.push("project");
+    fm.tags = tags;
+  });
+}
+
+// Find the project note for `file` in its directory or up to `maxLevels`
+// parent directories. If none is found, offer to convert a folder note found
+// along the way. Returns the project file, or null (after showing a notice).
+async function resolveProject(app, quickAddApi, file, maxLevels = 2) {
+  let currentDirPath = file.parent.path === "/" ? "" : file.parent.path;
+  let levelsSearched = 0;
+  const candidateFolderNotes = [];
+
+  // Phase 1: Search all directory levels for project notes,
+  // collecting folder-note candidates along the way.
+  while (levelsSearched <= maxLevels) {
+    const dirName = currentDirPath === "" ? app.vault.getName() : currentDirPath.split("/").pop();
+    const projects = findProjectsInDirectory(app, currentDirPath);
+
+    if (projects.length === 1) return projects[0];
+
+    if (projects.length > 1) {
+      const projectNames = projects.map((p) => `"${p.basename}"`).join(", ");
+      new Notice(`Multiple projects found in "${dirName}": ${projectNames}. Expected exactly one.`);
+      return null;
+    }
+
+    // No project in this directory — collect matching folder note for later
+    const folderNotePath = currentDirPath ? `${currentDirPath}/${dirName}.md` : `${dirName}.md`;
+    const folderNote = app.vault.getAbstractFileByPath(folderNotePath);
+    if (folderNote) {
+      candidateFolderNotes.push({
+        file: folderNote,
+        label: `${dirName}.md  (${currentDirPath || "/"})`,
+      });
+    }
+
+    // Move up one parent level
+    if (currentDirPath === "") break;
+    const parts = currentDirPath.split("/");
+    parts.pop();
+    currentDirPath = parts.join("/");
+    levelsSearched++;
+  }
+
+  // Phase 2: No project found — offer to convert a collected folder note
+  if (candidateFolderNotes.length > 0) {
+    const chosen = await quickAddApi.suggester(
+      candidateFolderNotes.map((c) => c.label),
+      candidateFolderNotes.map((c) => c.file)
+    );
+    if (chosen) {
+      await markAsProject(app, chosen);
+      new Notice(`Converted "${chosen.basename}" to a project.`);
+      return chosen;
+    }
+  }
+
+  new Notice(`No project found in "${file.parent.name}" or up to ${maxLevels} parent directories.`);
+  return null;
+}
+
 async function createTaskForProject(app, projectFile, { title, noun = "task" }) {
   const api = getTaskNotesApi(app);
   if (!api) return null;
@@ -141,5 +208,7 @@ module.exports = {
   ensureFolderTaskNote,
   findProjectsInDirectory,
   findProjectWithLookup,
+  markAsProject,
+  resolveProject,
   createTaskForProject,
 };

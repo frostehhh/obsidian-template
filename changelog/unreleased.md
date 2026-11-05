@@ -18,6 +18,7 @@ Breaking changes need a **Migration** note. -->
 - `patches` in a vault's `sync.config.json` (JSON merge patches by vault-relative path) are reapplied after every sync, so deliberate deviations in plugin settings survive and are never conflicts
 - `mise run release` refuses a changelog with a `**Migration**` entry unless `migrations/<version>.ts` exists or the changelog contains `<!-- migrations: none -->` (the steps are manual)
 - `mise run test` runs the unit tests
+- Add QuickAdd macro "TaskNotes - Create or Open project base" that finds the project note (tags `task` + `project`) in the current or parent directories and creates or opens `Notes - <project>.base` in the project's folder, listing notes whose `Parent` is the project. If no project is found, it offers to convert a folder note. Syncing QuickAdd `data.json` (`--data-json`) is needed to add it to existing vaults
 
 ## Changed
 
