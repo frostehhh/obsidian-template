@@ -81,6 +81,26 @@
       }
     },
     {
+      "id": "cb74e87c-6f53-4ee0-bf7e-3ebbd0c730f5",
+      "name": "TaskNotes - Create or Open project base",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "TaskNotes - Create or Open project base",
+        "id": "71e6e3b4-8ef9-4e44-ad92-2c0112453ab9",
+        "commands": [
+          {
+            "name": "qa-taskNotes-createOrOpenProjectBase",
+            "type": "UserScript",
+            "id": "62479d58-9249-430c-8984-4661502165dd",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-taskNotes-createOrOpenProjectBase.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
       "id": "d136e547-a540-4227-9099-b2912131d5fc",
       "name": "Folder - Create or Open folder base",
       "type": "Macro",
