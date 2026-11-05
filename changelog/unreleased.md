@@ -16,7 +16,11 @@ Breaking changes need a **Migration** note. -->
 - Migrations: `migrations/<version>.ts` in the template repo carry vaults across changes that file sync cannot express (renaming a key in a plugin's `data.json`, moving a file). Sync runs the ones a vault has not run yet, oldest first, records them in `template.lock.json` and prints what they did. `--dry-run` and `--plan` list them. See `migrations/README.md`
 - `--data-json` now merges a plugin's `data.json` key by key instead of overwriting it: template changes since the last merge arrive, your own settings stay, QuickAdd-style arrays of objects with an `id` merge by id, and keys changed on both sides are conflicts (`data.json [key]`) resolved with `--on-conflict`
 - `patches` in a vault's `sync.config.json` (JSON merge patches by vault-relative path) are reapplied after every sync, so deliberate deviations in plugin settings survive and are never conflicts
-- `mise run release` refuses a changelog with a `**Migration**` entry unless `migrations/<version>.ts` exists or the changelog contains `<!-- migrations: none -->` (the steps are manual)
+- `mise run release` refuses a changelog with a `**Migration**` entry unless `migrations/<version>.ts` exists or the changelog contains `## Fixed
+
+- The folder base ("Folder - Create or Open folder base") no longer shows another folder's notes when a different note has focus, for example in a split pane or the sidebar. It now stores the folder note's path in a reserved `qaFolderChild` formula instead of using `this`. Running the command again on an existing base updates only that formula (for example after the folder moved) and migrates bases that still use the old filter. Other filters, formulas and views in the base are left untouched. Re-sync `--Configurations--/Scripts/QuickAdd` (`mise run sync`) to get the new script, then run the command once in each existing folder base
+
+<!-- migrations: none -->` (the steps are manual)
 - `mise run test` runs the unit tests
 - Add QuickAdd macro "TaskNotes - Create or Open project base" that finds the project note (tags `task` + `project`) in the current or parent directories and creates or opens `Notes - <project>.base` in the project's folder, listing notes whose `Parent` is the project. If no project is found, it offers to convert a folder note. Syncing QuickAdd `data.json` (`--data-json`) is needed to add it to existing vaults
 
@@ -28,6 +32,10 @@ Breaking changes need a **Migration** note. -->
 - A vault without a lock treats existing files that differ from the template as conflicts instead of overwriting them. **Migration:** for existing vaults run `mise run sync -- --assume <version the vault is at>`, or `--on-conflict take-template` to overwrite as before
 - `--data-json` no longer overwrites `data.json` and never overwrites `genericPreviewCache.json`. **Migration:** the first merge into a vault synced before has no recorded base, so every key that differs is reported as a conflict; resolve once with `--on-conflict keep-vault` or `take-template` (or `--assume <version>`)
 - `sync --dry-run` JSON gains `migrations` and `patches` per vault, and `sync --json` gains `notes`
+
+## Fixed
+
+- The folder base ("Folder - Create or Open folder base") no longer shows another folder's notes when a different note has focus, for example in a split pane or the sidebar. It now stores the folder note's path in a reserved `qaFolderChild` formula instead of using `this`. Running the command again on an existing base updates only that formula (for example after the folder moved) and migrates bases that still use the old filter. Other filters, formulas and views in the base are left untouched. Re-sync `--Configurations--/Scripts/QuickAdd` (`mise run sync`) to get the new script, then run the command once in each existing folder base
 
 <!-- migrations: none -->
 (The migration steps above are manual: re-run sync with `--assume`/`--on-conflict`.)

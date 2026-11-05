@@ -1,6 +1,8 @@
+formulas:
+  qaFolderChild: 'if(note["Parent:"], !list(note["Parent:"]).filter(value.asFile() && value.asFile().path == "Notes/my note3/my note3.md").isEmpty(), false)'
 filters:
   and:
-    - if(note["Parent:"], !list(note["Parent:"]).filter(value.asFile().folder == this.file.folder && ("/" + this.file.folder).endsWith("/" + value.asFile().basename)).isEmpty(), false)
+    - formula.qaFolderChild
 views:
   - type: table
     name: Table

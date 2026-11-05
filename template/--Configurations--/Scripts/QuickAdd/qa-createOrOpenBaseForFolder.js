@@ -12,6 +12,7 @@ module.exports = async (params) => {
   const { app } = params;
   const { getActiveFile, getFolderContext, ensureFolderNote, createOrOpenFile } = await vaultRequire(app, "lib/utils");
   const { getParentPropertyKey } = await vaultRequire(app, "lib/excalibrain");
+  const { buildBaseContent, syncFolderChildFormula } = await vaultRequire(app, "lib/folderBase");
 
   const file = getActiveFile(app);
   if (!file) {
@@ -20,22 +21,23 @@ module.exports = async (params) => {
   }
 
   const { folderPath, folderName } = getFolderContext(file);
-  await ensureFolderNote(app, folderPath, folderName);
+  const folderNote = await ensureFolderNote(app, folderPath, folderName);
 
   const parentKey = await getParentPropertyKey(app);
   const notesBaseName = `Notes - ${folderName}.base`;
   const baseFilePath = folderPath ? `${folderPath}/${notesBaseName}` : notesBaseName;
 
-  const content = `filters:
-  and:
-    - 'if(note["${parentKey}"], !list(note["${parentKey}"]).filter(value.asFile().folder == this.file.folder && ("/" + this.file.folder).endsWith("/" + value.asFile().basename)).isEmpty(), false)'
-views:
-  - type: table
-    name: Table
-    order:
-      - file.name
-      - file.tags
-`;
+  // Existing base: refresh the reserved folder formula (moved folder, old `this` filter) before opening.
+  const existing = app.vault.getAbstractFileByPath(baseFilePath);
+  if (existing) {
+    const { parseYaml } = params.obsidian;
+    const result = await syncFolderChildFormula(app, existing, parentKey, folderNote.path, parseYaml);
+    if (result.status === "updated") new Notice(`Updated folder filter in "${notesBaseName}".`);
+    if (result.status === "migrated") new Notice(`Migrated "${notesBaseName}" to the new folder filter.`);
+    if (result.status === "skipped") new Notice(result.message);
+  }
+
+  const content = buildBaseContent(parentKey, folderNote.path);
 
   await createOrOpenFile(app, baseFilePath, content, {
     label: notesBaseName,
