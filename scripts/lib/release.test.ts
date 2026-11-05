@@ -18,3 +18,8 @@ test('migrationProblem: a Migration entry needs a migration file or an explicit 
   assert.equal(migrationProblem('0.4.0', withMigration, true), null);
   assert.equal(migrationProblem('0.4.0', `${withMigration}\n<!-- migrations: none -->\n`, false), null);
 });
+
+test('migrationProblem: mentioning the marker in prose is not the marker', () => {
+  const prose = `${withMigration}\n- Releases need \`<!-- migrations: none -->\` when steps are manual\n`;
+  assert.match(migrationProblem('0.4.0', prose, false) ?? '', /does not exist/);
+});

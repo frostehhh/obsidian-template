@@ -49,7 +49,8 @@ export function migrationProblem(version: string, changelog: string, hasMigratio
   const visible = changelog.replace(/<!--[\s\S]*?-->/g, '');
   if (!/\*\*Migration/i.test(visible)) return null;
   if (hasMigrationFile) return null;
-  if (/<!--\s*migrations:\s*none\s*-->/i.test(changelog)) return null;
+  // The marker must be a comment on its own line, so prose that merely mentions it does not count.
+  if (/^[ \t]*<!--\s*migrations:\s*none\s*-->[ \t]*$/im.test(changelog)) return null;
   return `The changelog has a **Migration** entry, but migrations/${version}.ts does not exist. Add the migration (see migrations/README.md), or add <!-- migrations: none --> to the changelog if the steps are manual.`;
 }
 
