@@ -11,6 +11,7 @@ import {
 } from '../lib/cli.ts';
 import { compareVault } from '../lib/compare.ts';
 import { resolveSource } from '../lib/source.ts';
+import { loadPolicy } from '../lib/policy.ts';
 import type { Vault, VaultReport } from '../lib/types.ts';
 
 function parseArgs() {
@@ -57,7 +58,6 @@ async function main() {
   const config = await loadConfig();
   const vaults = await discoverVaults();
   const source = resolveSource(args.from);
-  const version = source.label;
 
   let selected: Vault[];
   if (args.target) {
@@ -90,15 +90,17 @@ async function main() {
   }
 
   let allInSync = true;
-  const output: VaultReport[] = [];
+  const output: (VaultReport & { version: string })[] = [];
   for (const vault of selected) {
-    const results = await compareVault(vault, source);
+    // A vault's pin keeps it within a version range, so each vault is compared with its own source.
+    const vaultSource = args.from ? source : resolveSource(undefined, (await loadPolicy(vault)).pin);
+    const results = await compareVault(vault, vaultSource);
     if (results.some((r) => r.status !== 'in sync')) allInSync = false;
-    output.push({ vault, results });
+    output.push({ vault, results, version: vaultSource.label });
   }
 
   if (args.json) {
-    const payload = output.map(({ vault, results }) => ({
+    const payload = output.map(({ vault, results, version }) => ({
       vault: vault.name,
       root: vault.root,
       templateVersion: version,
@@ -120,7 +122,7 @@ async function main() {
     }));
     console.log(JSON.stringify(payload, null, 2));
   } else {
-    console.log(output.map(({ vault, results }) => renderReport(vault, version, results, { verbose: args.verbose })).join('\n\n'));
+    console.log(output.map(({ vault, results, version }) => renderReport(vault, version, results, { verbose: args.verbose })).join('\n\n'));
   }
 
   if (args.check && !allInSync) process.exit(1);

@@ -3,6 +3,7 @@ import { createHash } from 'crypto';
 import { execFileSync } from 'child_process';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
+import { pickTag, satisfies } from './semver.ts';
 import type { SourceFile, TemplateSource } from './types.ts';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -20,12 +21,25 @@ function git(args: string[]): Buffer {
   return execFileSync('git', args, { cwd: REPO, maxBuffer: MAX_BUFFER, stdio: ['ignore', 'pipe', 'pipe'] });
 }
 
-export function latestTag(): string | null {
+// v* tags, newest first.
+export function listTags(): string[] {
   try {
-    const tags = git(['tag', '--list', 'v*', '--sort=-v:refname']).toString('utf8').split('\n').filter(Boolean);
-    return tags[0] ?? null;
+    return git(['tag', '--list', 'v*', '--sort=-v:refname']).toString('utf8').split('\n').filter(Boolean);
   } catch {
-    return null;
+    return [];
+  }
+}
+
+export function latestTag(): string | null {
+  return listTags()[0] ?? null;
+}
+
+// Full commit id a ref points at.
+export function commitOf(ref: string): string {
+  try {
+    return git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]).toString('utf8').trim();
+  } catch {
+    throw new Error(`Unknown git ref: ${ref}`);
   }
 }
 
@@ -62,12 +76,9 @@ export function workingTreeSource(): TemplateSource {
 }
 
 // Reads template/ straight from git objects at a ref, ignoring the working tree.
-export function gitSource(ref: string): TemplateSource {
-  try {
-    git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
-  } catch {
-    throw new Error(`Unknown git ref: ${ref}`);
-  }
+// version overrides the version recorded in locks (used when the ref is a commit id taken from a plan file).
+export function gitSource(ref: string, version?: string): TemplateSource {
+  commitOf(ref);
 
   let tree: Map<string, string> | undefined;
   function loadTree(): Map<string, string> {
@@ -85,11 +96,11 @@ export function gitSource(ref: string): TemplateSource {
     return tree;
   }
 
-  const version = /^v\d/.test(ref) ? ref.slice(1) : ref;
+  const resolvedVersion = version ?? (/^v\d/.test(ref) ? ref.slice(1) : ref);
   return {
     ref,
-    version,
-    label: ref,
+    version: resolvedVersion,
+    label: version ? `v${version}` : ref,
     async list(rel) {
       const files = loadTree();
       const direct = files.get(rel);
@@ -110,10 +121,21 @@ export function gitSource(ref: string): TemplateSource {
   };
 }
 
-// --from <ref>: a git ref, "working-tree", or (default) the latest v* tag.
-export function resolveSource(from?: string): TemplateSource {
+// --from <ref>: a git ref, "working-tree", or (default) the latest v* tag, or the latest one within the vault's pin.
+// An explicit ref outside the pin is refused unless ignorePin is set.
+export function resolveSource(from?: string, pin?: string, { ignorePin = false }: { ignorePin?: boolean } = {}): TemplateSource {
   if (from === WORKING_TREE) return workingTreeSource();
-  if (from) return gitSource(from);
+  if (from) {
+    if (pin && !ignorePin && !satisfies(from, pin)) {
+      throw new Error(`${from} is outside the vault's pin "${pin}". Use --ignore-pin to override.`);
+    }
+    return gitSource(from);
+  }
+  if (pin) {
+    const tag = pickTag(listTags(), pin);
+    if (!tag) throw new Error(`No tag satisfies the pin "${pin}".`);
+    return gitSource(tag);
+  }
   const tag = latestTag();
   if (tag) return gitSource(tag);
   console.error('Warning: no v* tag found, syncing from the working tree.');

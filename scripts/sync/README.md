@@ -80,7 +80,8 @@ Content directories and settings items are copied after plugins. Existing files 
 
 ```sh
 mise run sync [--non-interactive] [--vaults A,B] [--plugins x,y] [--dirs D,E] [--settings f,g] [--data-json] [--dry-run] [--json]
-              [--from <ref>] [--on-conflict skip|take-template|keep-vault] [--assume <version>]
+              [--from <ref>] [--on-conflict skip|take-template|keep-vault] [--assume <version>] [--ignore-pin]
+              [--plan <file> | --apply <file>]
 ```
 
 With `--non-interactive` the wizard is skipped and selections are read from CLI flags and `sync.config.json`. Use `--dry-run` to preview what would be copied without making changes. `--json` prints structured output instead of human-readable text.
@@ -126,6 +127,30 @@ The full design is in [docs/specs/sync-versioning.md](../../docs/specs/sync-vers
 - **Conflicts.** `--on-conflict skip` (default) leaves the file and reports it again next run, and non-interactive runs exit 1. `take-template` applies the template version. `keep-vault` keeps the vault file and records it as a local override.
 - **Vaults without a lock.** Existing files that differ are conflicts. `--assume <version>` reads the base from that tag, so a vault known to be at 0.2.0 updates cleanly: `mise run sync -- --assume v0.2.0`.
 - **Data files** (`data.json`, `genericPreviewCache.json`) are copied only when missing, overwritten with `--data-json`, and never recorded in the lock.
+
+### Saved plans
+
+`mise run sync -- --non-interactive --vaults A --from v0.3.1 --plan plan.json` writes what sync would do without doing it. Review the file, then `mise run sync -- --apply plan.json` runs exactly that. The plan pins the template commit and the hash of every file it covers, so `--apply` refuses (exit 1, nothing changed) if the vault or its lock changed since the plan was made. `--on-conflict` is chosen at apply time. Plans from `--from working-tree` are refused.
+
+New files are staged next to their destination and renamed into place only when every write succeeded; the lock is written last.
+
+### Vault policy: `protect`, `exclude`, `pin`
+
+Besides the `default*` keys, `.obsidian/sync.config.json` (and the repo-level `sync.config.json`) accept:
+
+```json
+{
+  "pin": "0.2.x",
+  "protect": ["Notes/Templates/**", "--Configurations--/Scripts/QuickAdd/my-*.js"],
+  "exclude": ["plugin:excalidraw", "setting:templates.json"]
+}
+```
+
+- `protect`: vault-relative globs (`*`, `**`, `?`, trailing `/` for a whole directory) that sync never writes or deletes. They show up as `N local` and count as in sync.
+- `exclude`: items (`plugin:<id>`, `dir:<name>`, `setting:<name>`) that sync and compare skip entirely.
+- `pin`: a version range (`0.3.1`, `0.2.x`, `^0.3.0`, `~0.3.0`). Sync and compare use the highest matching tag instead of the latest. `--from` outside the pin is refused unless you add `--ignore-pin`.
+
+protect and exclude add up across repo and vault config; pin from the vault wins.
 
 ## state.json
 

@@ -3,7 +3,13 @@ import type { ConflictPolicy } from './types.ts';
 // Per-file outcome of a three-way comparison between
 //   t: the template source, b: the base recorded in the vault's lock, v: the vault.
 // undefined means the file does not exist on that side.
-export type Action = 'noop' | 'add' | 'update' | 'delete' | 'keep' | 'conflict';
+export type Action = 'noop' | 'add' | 'update' | 'delete' | 'keep' | 'conflict' | 'protected';
+
+// A protected path is never written or deleted: whatever sync would have done becomes 'protected'.
+export function applyProtection(action: Action, isProtected: boolean): Action {
+  if (!isProtected) return action;
+  return action === 'add' || action === 'update' || action === 'delete' || action === 'conflict' ? 'protected' : action;
+}
 
 export function decide(t: string | undefined, b: string | undefined, v: string | undefined): Action {
   if (t === v) return 'noop';
@@ -48,6 +54,7 @@ export function resolve(d: FileDecision, policy: ConflictPolicy): Resolution {
     case 'delete':
       return { effect: 'delete', base: undefined, conflict: false };
     case 'keep':
+    case 'protected':
       return { effect: 'none', base: b, conflict: false };
     case 'conflict':
       if (policy === 'take-template') {

@@ -28,6 +28,12 @@ export interface SyncConfig {
   defaultDirs?: string[];
   defaultSettings?: string[];
   syncDataJson?: boolean;
+  // Vault-relative globs sync never writes or deletes ("Notes/Templates/**").
+  protect?: string[];
+  // Items left out of sync and compare: "plugin:<id>", "dir:<name>", "setting:<name>".
+  exclude?: string[];
+  // Version range the vault stays within ("0.2.x", "^0.3.0", "0.3.1"): default source is the highest matching tag.
+  pin?: string;
 }
 
 export interface Vault {

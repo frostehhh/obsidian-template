@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { decide, resolve } from './reconcile.ts';
+import { decide, resolve, applyProtection } from './reconcile.ts';
 import type { FileDecision } from './reconcile.ts';
 
 // t = template, b = base (lock), v = vault; undefined = absent.
@@ -42,6 +42,16 @@ test('resolve: lock records the template hash after a clean update', () => {
 
 test('resolve: keep leaves the base alone', () => {
   assert.deepEqual(resolve(decision('keep', 'b', 'b'), 'skip'), { effect: 'none', base: 'b', conflict: false });
+});
+
+test('protection turns every write, delete or conflict into protected, and leaves the rest', () => {
+  for (const action of ['add', 'update', 'delete', 'conflict'] as const) {
+    assert.equal(applyProtection(action, true), 'protected');
+    assert.equal(applyProtection(action, false), action);
+  }
+  assert.equal(applyProtection('noop', true), 'noop');
+  assert.equal(applyProtection('keep', true), 'keep');
+  assert.deepEqual(resolve(decision('protected', 'n', 'o'), 'take-template'), { effect: 'none', base: 'o', conflict: false });
 });
 
 test('resolve: conflict policies', () => {

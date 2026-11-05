@@ -7,6 +7,9 @@ import {
   parseConflictPolicy,
 } from '../lib/cli.ts';
 import { resolveSource, gitSource } from '../lib/source.ts';
+import { loadPolicy } from '../lib/policy.ts';
+import { writePlanFile, applyPlanFile, appliedToJson, renderApplied, summarizePlan } from '../lib/planfile.ts';
+import type { PlannedVault } from '../lib/planfile.ts';
 import { executeSync, buildSyncPlan, describePlan, resolveVaultConfig } from '../lib/sync.ts';
 import type { SyncPreReport, SyncPostReport, SyncConflict } from '../lib/sync.ts';
 import type { Vault } from '../lib/types.ts';
@@ -49,11 +52,23 @@ function parseArgs() {
     from: value('--from'),
     assume: value('--assume'),
     onConflict: parseConflictPolicy(value('--on-conflict')),
+    plan: value('--plan'),
+    apply: value('--apply'),
+    ignorePin: flags.has('--ignore-pin'),
   };
 }
 
 async function main() {
   const args = parseArgs();
+
+  // --apply <file>: run a saved plan exactly as written; refuses if anything changed since it was made.
+  if (args.apply) {
+    const applied = await applyPlanFile(args.apply, args.onConflict);
+    console.log(args.json ? JSON.stringify(appliedToJson(applied), null, 2) : renderApplied(applied));
+    if (applied.some((a) => a.conflicts.length > 0)) process.exitCode = 1;
+    return;
+  }
+
   const config = await loadConfig();
   const source = resolveSource(args.from);
   const assume = args.assume ? gitSource(args.assume) : undefined;
@@ -107,10 +122,13 @@ async function main() {
       .map((c) => c.dir);
     const finalDirs = [...new Set([...resolved.dirs, ...autoDirs])];
 
-    return { vault, config: resolved, finalDirs };
+    // A pin keeps the vault within a version range, so each vault can have its own source.
+    const pin = (await loadPolicy(vault)).pin;
+    return { vault, config: resolved, finalDirs, source: resolveSource(args.from, pin, { ignorePin: args.ignorePin }) };
   }));
 
-  if (args.dryRun) {
+  if (args.dryRun || args.plan) {
+    const planned: PlannedVault[] = [];
     const output = {
       templateVersion,
       vaults: [] as Array<{
@@ -123,7 +141,7 @@ async function main() {
       }>,
     };
 
-    for (const { vault, config: vaultConfig, finalDirs } of vaultPlans) {
+    for (const { vault, config: vaultConfig, finalDirs, source: vaultSource } of vaultPlans) {
       const selectedPlugins = allPlugins.filter((pl) => vaultConfig.pluginIds.includes(pl.id));
       const plan = await buildSyncPlan({
         vaults: [vault],
@@ -132,9 +150,10 @@ async function main() {
         dirs: finalDirs,
         settings: vaultConfig.settings,
         syncDataJson: vaultConfig.syncDataJson,
-        source,
+        source: vaultSource,
         assume,
       });
+      planned.push({ vault, source: vaultSource, plan });
       output.vaults.push({
         name: vault.name,
         plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
@@ -143,6 +162,12 @@ async function main() {
         syncDataJson: vaultConfig.syncDataJson,
         plan: describePlan(plan),
       });
+    }
+    if (args.plan) {
+      await writePlanFile(args.plan, planned);
+      console.log(`Plan written to ${args.plan}. Apply it with: node scripts/agent/sync.ts --apply ${args.plan}`);
+      for (const { vault, source: s, plan } of planned) console.log(`  ${vault.name} (template ${s.label}): ${summarizePlan(plan)}`);
+      return;
     }
     console.log(JSON.stringify(output, null, 2));
     return;
@@ -153,7 +178,7 @@ async function main() {
   const allPostReports: SyncPostReport[] = [];
   const allConflicts: SyncConflict[] = [];
 
-  for (const { vault, config: vaultConfig, finalDirs } of vaultPlans) {
+  for (const { vault, config: vaultConfig, finalDirs, source: vaultSource } of vaultPlans) {
     const result = await executeSync({
       vaults: [vault],
       plugins: allPlugins,
@@ -161,7 +186,7 @@ async function main() {
       dirs: finalDirs,
       settings: vaultConfig.settings,
       syncDataJson: vaultConfig.syncDataJson,
-      source,
+      source: vaultSource,
       assume,
       onConflict: args.onConflict,
     });

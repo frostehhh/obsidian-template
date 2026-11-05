@@ -10,6 +10,8 @@ import {
 } from './cli.ts';
 import { hashContent } from './source.ts';
 import { loadLock, itemKey } from './lock.ts';
+import { loadPolicy, vaultRelPath, NO_POLICY } from './policy.ts';
+import type { Policy } from './policy.ts';
 import type { Item, ItemResult, LockItem, SourceFile, Status, TemplateSource, TreeComparison, Vault } from './types.ts';
 
 // Statuses, ordered from best to worst for display.
@@ -54,7 +56,9 @@ async function compareTrees(
   srcFiles: SourceFile[],
   destRoot: string,
   skip: (rel: string) => boolean = () => false,
-  base?: Record<string, string>
+  base?: Record<string, string>,
+  // Protected files are the vault's own: differences count as local overrides.
+  isProtected: (rel: string) => boolean = () => false
 ): Promise<TreeComparison> {
   const result = {
     match: [] as string[],
@@ -71,7 +75,7 @@ async function compareTrees(
 
   for (const { file, hash } of src) {
     const baseHash = base?.[file];
-    const unchangedInTemplate = baseHash !== undefined && baseHash === hash;
+    const unchangedInTemplate = (baseHash !== undefined && baseHash === hash) || isProtected(file);
     if (!destSet.has(file)) {
       (unchangedInTemplate ? result.overridden : result.missing).push(file);
       continue;
@@ -84,7 +88,7 @@ async function compareTrees(
   const srcSet = new Set(src.map((f) => f.file));
   const stale = new Set<string>();
   for (const [file, baseHash] of Object.entries(base ?? {})) {
-    if (srcSet.has(file) || skip(file) || !destSet.has(file)) continue;
+    if (srcSet.has(file) || skip(file) || !destSet.has(file) || isProtected(file)) continue;
     if ((await hashFile(join(destRoot, file))) === baseHash) stale.add(file);
   }
   result.stale = [...stale].sort();
@@ -136,11 +140,18 @@ export async function compareItem(
   vault: Vault,
   item: Item,
   source: TemplateSource,
-  lockItem?: LockItem
+  lockItem?: LockItem,
+  policy: Policy = NO_POLICY
 ): Promise<ItemResult> {
   const { srcRel, destRoot } = itemPaths(item, vault);
   const srcFiles = await source.list(srcRel);
-  const files = await compareTrees(srcFiles, destRoot, (rel) => isDataFile(item, rel), lockItem?.files);
+  const files = await compareTrees(
+    srcFiles,
+    destRoot,
+    (rel) => isDataFile(item, rel),
+    lockItem?.files,
+    (rel) => policy.isProtected(vaultRelPath(vault, join(destRoot, rel)))
+  );
   let extra: { templateVersion?: string | null; vaultVersion?: string | null } = {};
   if (item.kind === 'plugin') {
     extra = {
@@ -152,10 +163,11 @@ export async function compareItem(
 }
 
 export async function compareVault(vault: Vault, source: TemplateSource, items?: Item[]): Promise<ItemResult[]> {
-  const list = items ?? (await listItems(source));
+  const policy = await loadPolicy(vault);
+  const list = (items ?? (await listItems(source))).filter((item) => !policy.isExcluded(item));
   const lock = await loadLock(vault);
   const results: ItemResult[] = [];
-  for (const item of list) results.push(await compareItem(vault, item, source, lock?.items[itemKey(item)]));
+  for (const item of list) results.push(await compareItem(vault, item, source, lock?.items[itemKey(item)], policy));
   return results;
 }
 

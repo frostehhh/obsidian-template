@@ -17,9 +17,11 @@ import {
   renderInSyncNote,
   renderReport,
 } from '../lib/cli.ts';
-import { listItems } from '../lib/compare.ts';
 import { resolveSource, gitSource } from '../lib/source.ts';
-import { executeSync, buildSyncPlan, describePlan, countActions, resolveVaultConfig } from '../lib/sync.ts';
+import { loadPolicy } from '../lib/policy.ts';
+import { writePlanFile, applyPlanFile, appliedToJson, renderApplied, summarizePlan } from '../lib/planfile.ts';
+import type { PlannedVault } from '../lib/planfile.ts';
+import { executeSync, buildSyncPlan, describePlan, resolveVaultConfig } from '../lib/sync.ts';
 import type { Vault, VaultReport } from '../lib/types.ts';
 
 function parseArgs() {
@@ -61,13 +63,28 @@ function parseArgs() {
     from: value('--from'),
     assume: value('--assume'),
     onConflict: parseConflictPolicy(value('--on-conflict')),
+    plan: value('--plan'),
+    apply: value('--apply'),
+    ignorePin: flags.has('--ignore-pin'),
   };
 }
 
 async function main() {
   const args = parseArgs();
+
+  // --apply <file>: run a saved plan exactly as written; refuses if anything changed since it was made.
+  if (args.apply) {
+    const applied = await applyPlanFile(args.apply, args.onConflict);
+    console.log(args.json ? JSON.stringify(appliedToJson(applied), null, 2) : renderApplied(applied));
+    if (applied.some((a) => a.conflicts.length > 0)) process.exitCode = 1;
+    return;
+  }
+
   const config = await loadConfig();
   const source = resolveSource(args.from);
+  // A pin keeps a vault within a version range, so each vault can have its own source.
+  const sourceOf = async (vault: Vault) =>
+    resolveSource(args.from, (await loadPolicy(vault)).pin, { ignorePin: args.ignorePin });
   const assume = args.assume ? gitSource(args.assume) : undefined;
   const templateVersion = source.label;
 
@@ -116,13 +133,12 @@ async function main() {
       createMissing: true,
     });
 
-    const items = await listItems(source);
     const cs = p.spinner();
     cs.start('Comparing template with selected vaults...');
     const reports: VaultReport[] = [];
     const { compareVault } = await import('../lib/compare.ts');
     for (const vault of selectedVaults) {
-      reports.push({ vault, results: await compareVault(vault, source, items) });
+      reports.push({ vault, results: await compareVault(vault, await sourceOf(vault)) });
     }
     cs.stop('Comparison complete.');
     p.note(renderInSyncNote(reports), 'Currently in sync');
@@ -252,7 +268,8 @@ async function main() {
   }
   // Interactive mode: vaultPlans is already built inside the interactive block above
 
-  if (args.dryRun) {
+  if (args.dryRun || args.plan) {
+    const planned: PlannedVault[] = [];
     const output = {
       templateVersion,
       vaults: [] as Array<{
@@ -267,6 +284,7 @@ async function main() {
 
     for (const { vault, pluginIds, dirs, settings, syncDataJson: vaultSyncDataJson } of vaultPlans) {
       const selectedPlugins = plugins.filter((pl) => pluginIds.includes(pl.id));
+      const vaultSource = await sourceOf(vault);
       const plan = await buildSyncPlan({
         vaults: [vault],
         plugins,
@@ -274,9 +292,10 @@ async function main() {
         dirs,
         settings,
         syncDataJson: vaultSyncDataJson,
-        source,
+        source: vaultSource,
         assume,
       });
+      planned.push({ vault, source: vaultSource, plan });
       output.vaults.push({
         name: vault.name,
         plugins: selectedPlugins.map((p) => ({ id: p.id, name: p.name, version: p.version })),
@@ -286,9 +305,14 @@ async function main() {
         plan: describePlan(plan),
       });
       if (!args.json && !args.nonInteractive) {
-        const c = countActions(plan);
-        p.log.info(`${vault.name}: ${c.add} add, ${c.update} update, ${c.delete} delete, ${c.keep} keep, ${c.conflict} conflict`);
+        p.log.info(`${vault.name} (template ${vaultSource.label}): ${summarizePlan(plan)}`);
       }
+    }
+    if (args.plan) {
+      await writePlanFile(args.plan, planned);
+      console.log(`Plan written to ${args.plan}. Apply it with: mise run sync -- --apply ${args.plan}`);
+      for (const { vault, source: s, plan } of planned) console.log(`  ${vault.name} (template ${s.label}): ${summarizePlan(plan)}`);
+      return;
     }
     console.log(JSON.stringify(output, null, 2));
     return;
@@ -308,7 +332,7 @@ async function main() {
       dirs,
       settings,
       syncDataJson: vaultSyncDataJson,
-      source,
+      source: await sourceOf(vault),
       assume,
       onConflict: args.onConflict,
     });

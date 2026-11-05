@@ -1,6 +1,6 @@
 # Sync versioning
 
-Status: phase 1 implemented (tag source, lock file, three-way reconcile). Phases 2 and 3 are planned.
+Status: phases 1 and 2 implemented (tag source, lock file, three-way reconcile, vault policy, saved plans). Phase 3 is planned.
 
 ## Goals
 
@@ -60,6 +60,7 @@ For each file, three hashes are compared. `t` is the source, `b` is the lock (ba
 | `v == b`, otherwise | **update** |
 | `v != b`, `t == b` | **keep**: a local override. Reported, never overwritten or restored |
 | `v != b`, `t != b` | **conflict** |
+| any of add, update, delete, conflict on a protected path | **protected**: nothing is written, the base stays |
 
 Consequences:
 
@@ -97,17 +98,42 @@ Phase 3 replaces this with a key-level merge.
 - Files that the template removed and the vault still has unchanged show as `stale` and make the item `outdated`.
 - The header shows the template version in use and the version(s) the vault was last synced from, or `untracked` when there is no lock.
 
-## Plan
+## Vault configuration on top of the template
 
-Phase 1 builds a plan (a list of per-file decisions per item) before writing anything. `--dry-run` prints it. The plan JSON has the shape `{ kind, id, add[], update[], delete[], keep[], conflict[] }` per item.
+`.obsidian/sync.config.json` (vault) and `sync.config.json` (repo) accept three more keys. Precedence for pin is vault over repo; protect and exclude add up across both.
+
+```json
+{
+  "pin": "0.2.x",
+  "protect": ["Notes/Templates/**", "--Configurations--/Scripts/QuickAdd/my-*.js"],
+  "exclude": ["plugin:excalidraw", "setting:templates.json"]
+}
+```
+
+- **`protect`**: globs on vault-relative paths (`*` within a directory, `**` across directories, `?`, a trailing `/` means everything below). Sync never writes or deletes a protected path, whatever the template does. The lock base stays as it was, so removing the protection later updates the file cleanly. Differences in protected files are reported as local overrides (`N local`) and count as in sync. Protect wins over everything, including `--data-json` and `--on-conflict take-template`.
+- **`exclude`**: items left out entirely, written `kind:name` (`plugin:<id>`, `dir:<name>`, `setting:<name>`, case-insensitive). They are dropped from sync and from compare, even when selected by `defaultPlugins` or the wizard.
+- **`pin`**: a version range (`0.3.1`, `0.2.x`, `^0.3.0`, `~0.3.0`). Without `--from`, the source is the highest `v*` tag inside the range, for both sync and compare, so a pinned vault is `in sync` against its own version. An explicit `--from` outside the pin is refused unless `--ignore-pin` is given. `--from working-tree` is not checked against the pin.
+
+Sync resolves the source per vault, so vaults with different pins can be synced in one run.
+
+## Plan and apply
+
+Sync builds a plan (per-file decisions per item) before writing anything.
+
+- `--dry-run` prints it as JSON: per item `{ kind, id, baseKnown, add[], update[], delete[], keep[], protected[], conflict[] }`.
+- `--plan <file>` saves it instead of applying. The file pins the template commit, every decision with the hash of the template, base and vault file, and a digest of the vault's lock file. Plans from `--from working-tree` are refused, as they cannot be reproduced.
+- `--apply <file>` runs the saved plan as written, with no selection flags. Before touching any vault it checks that the vault exists, that its lock is unchanged, and that every file the plan covers still has the hash it had when the plan was made. If anything differs, nothing is changed and the command exits 1 with a list. `--on-conflict` is chosen at apply time.
+
+Writes are staged: every new file is first written next to its destination as `<name>.sync-tmp`. Only when all of them succeed are they renamed into place, deletions run, `community-plugins.json` is updated and the lock is written, last. A failure while staging removes the temp files and changes nothing.
 
 ## Roadmap
 
 1. **Phase 1 (done):** tag source, lock, three-way reconcile with deletions, conflict policy, `--assume`, lock-aware compare.
-2. **Phase 2:** vault config `protect` (globs sync never touches), `exclude`, `pin` (version range a vault stays within); `--plan <file>` / `--apply <file>`; staged writes.
+2. **Phase 2 (done):** vault config `protect`, `exclude` and `pin`; `--plan <file>` / `--apply <file>`; staged writes.
 3. **Phase 3:** `migrations/<version>.ts` executed in semver order for versions in (lock version, target], recorded in the lock; key-level `data.json` merge using the base from git; vault `patches` (JSON merge patches reapplied after every sync); release check that every changelog entry marked as migration has one.
 
-## Known limitations of phase 1
+## Known limitations
 
 - `state.json` is read from the working tree, not from the source ref. An item removed from the template between versions is only cleaned up if it is still listed there.
-- Writes are per file, not staged across the whole run. The lock is written last, so a failed run is safe to repeat.
+- Renames during the final rename step are not transactional. If the process dies in the middle of it, rerunning sync completes the job (the lock is still the old one).
+- `protect` and `exclude` have no CLI flags; they come from the config files only.
