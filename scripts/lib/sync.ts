@@ -1,25 +1,29 @@
-import { readdir, readFile, writeFile, mkdir, copyFile } from 'fs/promises';
-import { join } from 'path';
-import {
-  TEMPLATE_DIR,
-  TEMPLATE_PLUGINS_DIR,
-  TEMPLATE_OBSIDIAN_DIR,
-  DATA_FILES,
-  pathExists,
-  copyRecursive,
-  copyAny,
-} from './cli.ts';
-import { compareVault, compareItem, listItems } from './compare.ts';
-import type { Vault, PluginInfo, ItemResult, SyncConfig } from './types.ts';
+import { readFile, writeFile, mkdir, rename, rm, rmdir } from 'fs/promises';
+import { dirname, join } from 'path';
+import { pathExists } from './cli.ts';
+import { compareVault, compareItem, listItems, itemPaths, isDataFile, hashFile } from './compare.ts';
+import { loadLock, saveLock, emptyLock, itemKey } from './lock.ts';
+import { decide, resolve } from './reconcile.ts';
+import type { Action, FileDecision } from './reconcile.ts';
+import type {
+  ConflictPolicy,
+  Item,
+  ItemResult,
+  Lock,
+  PluginInfo,
+  SyncConfig,
+  TemplateSource,
+  Vault,
+} from './types.ts';
 
-export interface SyncPlanEntry {
-  plugin: PluginInfo;
+export interface ItemPlan {
   vault: Vault;
-  srcDir: string;
-  destDir: string;
-  filesToCopy: string[];
-  filesToSkip: string[];
-  subDirs: string[];
+  item: Item;
+  srcRel: string;
+  destRoot: string;
+  decisions: FileDecision[];
+  // True when the vault has a lock entry (or --assume supplied a base) for this item.
+  baseKnown: boolean;
   addToCommunityPlugins: boolean;
   existingCommunityPlugins: string[];
 }
@@ -31,6 +35,10 @@ export interface SyncOptions {
   dirs: string[];
   settings: string[];
   syncDataJson: boolean;
+  source: TemplateSource;
+  onConflict?: ConflictPolicy;
+  // Base for items that have no lock entry yet, read from this template version (e.g. a vault known to be at 0.2.0).
+  assume?: TemplateSource;
 }
 
 export interface SyncPreReport {
@@ -44,10 +52,17 @@ export interface SyncPostReport {
   results: ItemResult[];
 }
 
+export interface SyncConflict {
+  vault: Vault;
+  item: Item;
+  file: string;
+}
+
 export interface SyncResult {
-  plan: SyncPlanEntry[];
+  plan: ItemPlan[];
   preReports: SyncPreReport[];
   postReports: SyncPostReport[];
+  conflicts: SyncConflict[];
 }
 
 export interface ResolvedVaultConfig {
@@ -75,90 +90,183 @@ export function resolveVaultConfig(
   return { pluginIds, dirs, settings, syncDataJson };
 }
 
-export async function buildSyncPlan(options: SyncOptions): Promise<SyncPlanEntry[]> {
-  const { vaults, plugins, pluginIds, syncDataJson } = options;
-  const selectedPlugins = plugins.filter((pl) => pluginIds.includes(pl.id));
-  const plan: SyncPlanEntry[] = [];
+// Items selected for sync, in listing order. Directories match case-insensitively (ExcaliBrain).
+export function selectItems(items: Item[], options: Pick<SyncOptions, 'pluginIds' | 'dirs' | 'settings'>): Item[] {
+  const dirs = options.dirs.map((d) => d.toLowerCase());
+  return items.filter(
+    (item) =>
+      (item.kind === 'plugin' && options.pluginIds.includes(item.id)) ||
+      (item.kind === 'dir' && dirs.includes(item.id.toLowerCase())) ||
+      (item.kind === 'setting' && options.settings.includes(item.id))
+  );
+}
 
-  for (const vault of vaults) {
+async function vaultHashOf(destRoot: string, file: string): Promise<string | undefined> {
+  const full = join(destRoot, file);
+  try {
+    return await hashFile(full);
+  } catch {
+    return undefined;
+  }
+}
+
+async function planItem(
+  vault: Vault,
+  item: Item,
+  lock: Lock | null,
+  options: SyncOptions,
+  existingCommunityPlugins: string[]
+): Promise<ItemPlan> {
+  const { source, assume, syncDataJson } = options;
+  const { srcRel, destRoot } = itemPaths(item, vault);
+  const templateFiles = await source.list(srcRel);
+
+  let base: Record<string, string> | undefined = lock?.items[itemKey(item)]?.files;
+  if (!base && assume) {
+    base = Object.fromEntries((await assume.list(srcRel)).map((f) => [f.file, f.hash]));
+  }
+
+  const templateHashes = new Map(templateFiles.map((f) => [f.file, f.hash]));
+  const files = [...new Set([...templateHashes.keys(), ...Object.keys(base ?? {})])].sort();
+
+  const decisions: FileDecision[] = [];
+  for (const file of files) {
+    const templateHash = templateHashes.get(file);
+    const vaultHash = await vaultHashOf(destRoot, file);
+
+    if (isDataFile(item, file)) {
+      // Per-vault state: copied when missing, overwritten only on request, never recorded in the lock.
+      if (templateHash === undefined) continue;
+      let action: Action = 'noop';
+      if (vaultHash === undefined) action = 'add';
+      else if (syncDataJson && vaultHash !== templateHash) action = 'update';
+      decisions.push({ file, action, templateHash, baseHash: undefined, vaultHash, tracked: false });
+      continue;
+    }
+
+    const baseHash = base?.[file];
+    decisions.push({ file, action: decide(templateHash, baseHash, vaultHash), templateHash, baseHash, vaultHash, tracked: true });
+  }
+
+  return {
+    vault,
+    item,
+    srcRel,
+    destRoot,
+    decisions,
+    baseKnown: base !== undefined,
+    addToCommunityPlugins: item.kind === 'plugin' && !existingCommunityPlugins.includes(item.id),
+    existingCommunityPlugins,
+  };
+}
+
+// Decides what sync would do, without writing anything.
+export async function buildSyncPlan(options: SyncOptions): Promise<ItemPlan[]> {
+  const items = selectItems(await listItems(options.source), options);
+  const plan: ItemPlan[] = [];
+
+  for (const vault of options.vaults) {
     let existingCommunityPlugins: string[] = [];
     try {
       existingCommunityPlugins = JSON.parse(await readFile(vault.communityPluginsPath, 'utf8'));
     } catch {
       // Missing community-plugins.json — start fresh
     }
-
-    for (const plugin of selectedPlugins) {
-      const srcDir = join(TEMPLATE_PLUGINS_DIR, plugin.id);
-      const destDir = join(vault.pluginsDir, plugin.id);
-      const allFiles = await readdir(srcDir, { withFileTypes: true });
-
-      const filesToCopy: string[] = [];
-      const filesToSkip: string[] = [];
-      for (const entry of allFiles) {
-        if (!entry.isFile()) continue;
-        if (!syncDataJson && DATA_FILES.has(entry.name)) {
-          const destExists = await pathExists(join(destDir, entry.name));
-          if (destExists) {
-            filesToSkip.push(entry.name);
-          } else {
-            filesToCopy.push(entry.name);
-          }
-        } else {
-          filesToCopy.push(entry.name);
-        }
-      }
-
-      const subDirs = allFiles.filter((e) => e.isDirectory()).map((e) => e.name);
-
-      plan.push({
-        plugin,
-        vault,
-        srcDir,
-        destDir,
-        filesToCopy,
-        filesToSkip,
-        subDirs,
-        addToCommunityPlugins: !existingCommunityPlugins.includes(plugin.id),
-        existingCommunityPlugins,
-      });
+    const lock = await loadLock(vault);
+    for (const item of items) {
+      plan.push(await planItem(vault, item, lock, options, existingCommunityPlugins));
     }
   }
-
   return plan;
 }
 
+// JSON-friendly view of a plan: files grouped by action per item.
+export function describePlan(plan: ItemPlan[]) {
+  return plan.map((entry) => {
+    const by = (action: Action) => entry.decisions.filter((d) => d.action === action).map((d) => d.file || entry.item.id);
+    return {
+      kind: entry.item.kind,
+      id: entry.item.id,
+      baseKnown: entry.baseKnown,
+      add: by('add'),
+      update: by('update'),
+      delete: by('delete'),
+      keep: by('keep'),
+      conflict: by('conflict'),
+      addToCommunityPlugins: entry.addToCommunityPlugins,
+    };
+  });
+}
+
+export function countActions(plan: ItemPlan[]): Record<Action, number> {
+  const counts: Record<Action, number> = { noop: 0, add: 0, update: 0, delete: 0, keep: 0, conflict: 0 };
+  for (const entry of plan) for (const d of entry.decisions) counts[d.action] += 1;
+  return counts;
+}
+
+async function writeAtomic(dest: string, content: Buffer): Promise<void> {
+  await mkdir(dirname(dest), { recursive: true });
+  const tmp = `${dest}.sync-tmp`;
+  await writeFile(tmp, content);
+  await rename(tmp, dest);
+}
+
+async function removeEmptyParents(file: string, stopAt: string): Promise<void> {
+  let dir = dirname(file);
+  while (dir.length > stopAt.length && dir.startsWith(stopAt)) {
+    try {
+      await rmdir(dir);
+    } catch {
+      return; // not empty (or already gone)
+    }
+    dir = dirname(dir);
+  }
+}
+
 export async function executeSync(options: SyncOptions): Promise<SyncResult> {
-  const { vaults, pluginIds, dirs, settings } = options;
+  const { vaults, source } = options;
+  const policy = options.onConflict ?? 'skip';
+  const items = await listItems(source);
+  const selected = selectItems(items, options);
 
   // Pre-sync comparison
-  const items = await listItems();
   const preReports: SyncPreReport[] = [];
   for (const vault of vaults) {
-    const results = await compareVault(vault, items);
+    const results = await compareVault(vault, source, items);
     preReports.push({ vault, inSync: results.filter((r) => r.status === 'in sync').length, total: results.length });
   }
 
-  // Build and execute plan
   const plan = await buildSyncPlan(options);
+  const conflicts: SyncConflict[] = [];
+  const locks = new Map<string, Lock>();
   const communityPluginUpdates = new Map<string, string[]>();
 
   for (const entry of plan) {
-    await mkdir(entry.destDir, { recursive: true });
+    const { vault, item, srcRel, destRoot } = entry;
+    const lock = locks.get(vault.name) ?? (await loadLock(vault)) ?? emptyLock();
+    locks.set(vault.name, lock);
 
-    for (const file of entry.filesToCopy) {
-      await copyFile(join(entry.srcDir, file), join(entry.destDir, file));
-    }
+    const files: Record<string, string> = {};
+    for (const d of entry.decisions) {
+      const resolution = resolve(d, policy);
+      const target = join(destRoot, d.file);
 
-    for (const subDir of entry.subDirs) {
-      await copyRecursive(join(entry.srcDir, subDir), join(entry.destDir, subDir));
+      if (resolution.conflict) conflicts.push({ vault, item, file: d.file });
+      if (resolution.effect === 'write') {
+        await writeAtomic(target, await source.read(srcRel, d.file));
+      } else if (resolution.effect === 'delete') {
+        await rm(target, { force: true });
+        await removeEmptyParents(target, destRoot);
+      }
+      // Data files are written (when missing or forced) but not recorded.
+      if (d.tracked && resolution.base !== undefined) files[d.file] = resolution.base;
     }
+    lock.items[itemKey(item)] = { templateVersion: source.version, files };
 
     if (entry.addToCommunityPlugins) {
-      const key = entry.vault.name;
-      const current = communityPluginUpdates.get(key) ?? [...entry.existingCommunityPlugins];
-      if (!current.includes(entry.plugin.id)) current.push(entry.plugin.id);
-      communityPluginUpdates.set(key, current);
+      const current = communityPluginUpdates.get(vault.name) ?? [...entry.existingCommunityPlugins];
+      if (!current.includes(item.id)) current.push(item.id);
+      communityPluginUpdates.set(vault.name, current);
     }
   }
 
@@ -169,40 +277,20 @@ export async function executeSync(options: SyncOptions): Promise<SyncResult> {
     }
   }
 
+  // The lock goes last: a run that failed earlier leaves the previous lock, so repeating it is safe.
   for (const vault of vaults) {
-    for (const dir of dirs) {
-      const src = join(TEMPLATE_DIR, dir);
-      const dest = join(vault.root, dir);
-      if (await pathExists(src)) {
-        await copyRecursive(src, dest);
-      }
-    }
-  }
-
-  for (const vault of vaults) {
-    for (const item of settings) {
-      const src = join(TEMPLATE_OBSIDIAN_DIR, item);
-      const dest = join(vault.root, '.obsidian', item);
-      if (await pathExists(src)) {
-        await copyAny(src, dest);
-      }
-    }
+    const lock = locks.get(vault.name);
+    if (lock && (await pathExists(join(vault.root, '.obsidian')))) await saveLock(vault, lock);
   }
 
   // Post-sync verification
-  const syncedItems = items.filter(
-    (item) =>
-      (item.kind === 'plugin' && pluginIds.includes(item.id)) ||
-      (item.kind === 'dir' && dirs.some((d) => d.toLowerCase() === item.id.toLowerCase())) ||
-      (item.kind === 'setting' && settings.includes(item.id))
-  );
-
   const postReports: SyncPostReport[] = [];
   for (const vault of vaults) {
+    const lock = await loadLock(vault);
     const results: ItemResult[] = [];
-    for (const item of syncedItems) results.push(await compareItem(vault, item));
+    for (const item of selected) results.push(await compareItem(vault, item, source, lock?.items[itemKey(item)]));
     postReports.push({ vault, results });
   }
 
-  return { plan, preReports, postReports };
+  return { plan, preReports, postReports, conflicts };
 }

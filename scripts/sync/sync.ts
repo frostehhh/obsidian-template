@@ -12,13 +12,14 @@ import {
   discoverPlugins,
   discoverVaults,
   selectVaults,
-  getTemplateVersion,
+  parseConflictPolicy,
   statusHint,
   renderInSyncNote,
   renderReport,
 } from '../lib/cli.ts';
 import { listItems } from '../lib/compare.ts';
-import { executeSync, buildSyncPlan, resolveVaultConfig } from '../lib/sync.ts';
+import { resolveSource, gitSource } from '../lib/source.ts';
+import { executeSync, buildSyncPlan, describePlan, countActions, resolveVaultConfig } from '../lib/sync.ts';
 import type { Vault, VaultReport } from '../lib/types.ts';
 
 function parseArgs() {
@@ -57,15 +58,20 @@ function parseArgs() {
     dataJson: flags.has('--data-json'),
     json: flags.has('--json'),
     dryRun: flags.has('--dry-run'),
+    from: value('--from'),
+    assume: value('--assume'),
+    onConflict: parseConflictPolicy(value('--on-conflict')),
   };
 }
 
 async function main() {
   const args = parseArgs();
   const config = await loadConfig();
-  const templateVersion = await getTemplateVersion();
+  const source = resolveSource(args.from);
+  const assume = args.assume ? gitSource(args.assume) : undefined;
+  const templateVersion = source.label;
 
-  const plugins = await discoverPlugins();
+  const plugins = await discoverPlugins(source);
   const vaults = await discoverVaults();
 
   if (vaults.length === 0) {
@@ -110,13 +116,13 @@ async function main() {
       createMissing: true,
     });
 
-    const items = await listItems();
+    const items = await listItems(source);
     const cs = p.spinner();
     cs.start('Comparing template with selected vaults...');
     const reports: VaultReport[] = [];
     const { compareVault } = await import('../lib/compare.ts');
     for (const vault of selectedVaults) {
-      reports.push({ vault, results: await compareVault(vault, items) });
+      reports.push({ vault, results: await compareVault(vault, source, items) });
     }
     cs.stop('Comparison complete.');
     p.note(renderInSyncNote(reports), 'Currently in sync');
@@ -255,13 +261,7 @@ async function main() {
         directories: string[];
         settings: string[];
         syncDataJson: boolean;
-        plan: Array<{
-          plugin: string;
-          filesToCopy: string[];
-          filesToSkip: string[];
-          subDirs: string[];
-          addToCommunityPlugins: boolean;
-        }>;
+        plan: ReturnType<typeof describePlan>;
       }>,
     };
 
@@ -274,6 +274,8 @@ async function main() {
         dirs,
         settings,
         syncDataJson: vaultSyncDataJson,
+        source,
+        assume,
       });
       output.vaults.push({
         name: vault.name,
@@ -281,14 +283,12 @@ async function main() {
         directories: dirs,
         settings,
         syncDataJson: vaultSyncDataJson,
-        plan: plan.map((e) => ({
-          plugin: e.plugin.id,
-          filesToCopy: e.filesToCopy,
-          filesToSkip: e.filesToSkip,
-          subDirs: e.subDirs,
-          addToCommunityPlugins: e.addToCommunityPlugins,
-        })),
+        plan: describePlan(plan),
       });
+      if (!args.json && !args.nonInteractive) {
+        const c = countActions(plan);
+        p.log.info(`${vault.name}: ${c.add} add, ${c.update} update, ${c.delete} delete, ${c.keep} keep, ${c.conflict} conflict`);
+      }
     }
     console.log(JSON.stringify(output, null, 2));
     return;
@@ -299,6 +299,7 @@ async function main() {
 
   const allPreReports = [];
   const allPostReports = [];
+  const allConflicts = [];
   for (const { vault, pluginIds, dirs, settings, syncDataJson: vaultSyncDataJson } of vaultPlans) {
     const result = await executeSync({
       vaults: [vault],
@@ -307,9 +308,13 @@ async function main() {
       dirs,
       settings,
       syncDataJson: vaultSyncDataJson,
+      source,
+      assume,
+      onConflict: args.onConflict,
     });
     allPreReports.push(...result.preReports);
     allPostReports.push(...result.postReports);
+    allConflicts.push(...result.conflicts);
   }
 
   if (!args.nonInteractive) s.stop('Sync complete.');
@@ -333,9 +338,17 @@ async function main() {
           status,
           templateVersion,
           vaultVersion,
-          files: { match: files.match, differs: files.differs, missing: files.missing, extra: files.extra },
+          files: {
+            match: files.match,
+            differs: files.differs,
+            missing: files.missing,
+            extra: files.extra,
+            overridden: files.overridden,
+            stale: files.stale,
+          },
         })),
       })),
+      conflicts: allConflicts.map((c) => ({ vault: c.vault.name, kind: c.item.kind, id: c.item.id, file: c.file })),
     }, null, 2));
   } else {
     if (args.nonInteractive) {
@@ -363,6 +376,12 @@ async function main() {
           p.log.warn(renderReport(vault, templateVersion, notMatching));
         }
       }
+    }
+    if (allConflicts.length > 0) {
+      const lines = allConflicts.map((c) => `${c.vault.name}: ${c.item.kind} ${c.item.label}: ${c.file || c.item.id}`);
+      const message = `${allConflicts.length} conflict(s) left untouched (changed in both the vault and the template). Re-run with --on-conflict take-template|keep-vault:\n${lines.map((l) => `  ${l}`).join('\n')}`;
+      if (args.nonInteractive) console.log(message);
+      else p.log.warn(message);
     }
   }
 
@@ -395,6 +414,8 @@ async function main() {
       `Done! Synced ${totalPlugins} plugin(s), ${totalDirs} director${totalDirs === 1 ? 'y' : 'ies'}, and ${totalSettings} setting(s) across ${selectedVaults.length} vault(s). Template ${templateVersion}.`
     );
   }
+
+  if (allConflicts.length > 0 && args.nonInteractive) process.exitCode = 1;
 }
 
 main().catch((err) => {

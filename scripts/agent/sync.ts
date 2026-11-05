@@ -4,10 +4,11 @@ import {
   loadVaultConfig,
   discoverPlugins,
   discoverVaults,
-  getTemplateVersion,
+  parseConflictPolicy,
 } from '../lib/cli.ts';
-import { executeSync, buildSyncPlan, resolveVaultConfig } from '../lib/sync.ts';
-import type { SyncPreReport, SyncPostReport } from '../lib/sync.ts';
+import { resolveSource, gitSource } from '../lib/source.ts';
+import { executeSync, buildSyncPlan, describePlan, resolveVaultConfig } from '../lib/sync.ts';
+import type { SyncPreReport, SyncPostReport, SyncConflict } from '../lib/sync.ts';
 import type { Vault } from '../lib/types.ts';
 
 function parseArgs() {
@@ -45,15 +46,20 @@ function parseArgs() {
     dataJson: flags.has('--data-json'),
     json: flags.has('--json'),
     dryRun: flags.has('--dry-run'),
+    from: value('--from'),
+    assume: value('--assume'),
+    onConflict: parseConflictPolicy(value('--on-conflict')),
   };
 }
 
 async function main() {
   const args = parseArgs();
   const config = await loadConfig();
-  const templateVersion = await getTemplateVersion();
+  const source = resolveSource(args.from);
+  const assume = args.assume ? gitSource(args.assume) : undefined;
+  const templateVersion = source.label;
 
-  const allPlugins = await discoverPlugins();
+  const allPlugins = await discoverPlugins(source);
   const allVaults = await discoverVaults();
 
   // Resolve vaults
@@ -113,13 +119,7 @@ async function main() {
         directories: string[];
         settings: string[];
         syncDataJson: boolean;
-        plan: Array<{
-          plugin: string;
-          filesToCopy: string[];
-          filesToSkip: string[];
-          subDirs: string[];
-          addToCommunityPlugins: boolean;
-        }>;
+        plan: ReturnType<typeof describePlan>;
       }>,
     };
 
@@ -132,6 +132,8 @@ async function main() {
         dirs: finalDirs,
         settings: vaultConfig.settings,
         syncDataJson: vaultConfig.syncDataJson,
+        source,
+        assume,
       });
       output.vaults.push({
         name: vault.name,
@@ -139,13 +141,7 @@ async function main() {
         directories: finalDirs,
         settings: vaultConfig.settings,
         syncDataJson: vaultConfig.syncDataJson,
-        plan: plan.map((e) => ({
-          plugin: e.plugin.id,
-          filesToCopy: e.filesToCopy,
-          filesToSkip: e.filesToSkip,
-          subDirs: e.subDirs,
-          addToCommunityPlugins: e.addToCommunityPlugins,
-        })),
+        plan: describePlan(plan),
       });
     }
     console.log(JSON.stringify(output, null, 2));
@@ -155,6 +151,7 @@ async function main() {
   // Execute per vault
   const allPreReports: SyncPreReport[] = [];
   const allPostReports: SyncPostReport[] = [];
+  const allConflicts: SyncConflict[] = [];
 
   for (const { vault, config: vaultConfig, finalDirs } of vaultPlans) {
     const result = await executeSync({
@@ -164,9 +161,13 @@ async function main() {
       dirs: finalDirs,
       settings: vaultConfig.settings,
       syncDataJson: vaultConfig.syncDataJson,
+      source,
+      assume,
+      onConflict: args.onConflict,
     });
     allPreReports.push(...result.preReports);
     allPostReports.push(...result.postReports);
+    allConflicts.push(...result.conflicts);
   }
 
   if (args.json) {
@@ -187,9 +188,17 @@ async function main() {
           status,
           templateVersion,
           vaultVersion,
-          files: { match: files.match, differs: files.differs, missing: files.missing, extra: files.extra },
+          files: {
+            match: files.match,
+            differs: files.differs,
+            missing: files.missing,
+            extra: files.extra,
+            overridden: files.overridden,
+            stale: files.stale,
+          },
         })),
       })),
+      conflicts: allConflicts.map((c) => ({ vault: c.vault.name, kind: c.item.kind, id: c.item.id, file: c.file })),
     }, null, 2));
   } else {
     console.log(`Synced across ${selectedVaults.length} vault(s):`);
@@ -207,7 +216,13 @@ async function main() {
         }
       }
     }
+    if (allConflicts.length > 0) {
+      console.log(`  ${allConflicts.length} conflict(s) left untouched (re-run with --on-conflict take-template|keep-vault):`);
+      for (const c of allConflicts) console.log(`      ${c.vault.name}: ${c.item.kind} ${c.item.label}: ${c.file || c.item.id}`);
+    }
   }
+
+  if (allConflicts.length > 0) process.exitCode = 1;
 }
 
 main().catch((err) => {

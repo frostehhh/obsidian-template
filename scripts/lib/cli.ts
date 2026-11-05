@@ -4,7 +4,18 @@ import { readdir, readFile, mkdir, copyFile, stat } from 'fs/promises';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
-import type { ItemKind, ItemResult, PluginInfo, State, Status, SyncConfig, Vault, VaultReport } from './types.ts';
+import type {
+  ConflictPolicy,
+  ItemKind,
+  ItemResult,
+  PluginInfo,
+  State,
+  Status,
+  SyncConfig,
+  TemplateSource,
+  Vault,
+  VaultReport,
+} from './types.ts';
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const TEMPLATE_DIR = join(REPO_ROOT, 'template');
@@ -109,12 +120,12 @@ export async function loadVaultConfig(vaultRoot: string): Promise<SyncConfig> {
   }
 }
 
-// Plugins listed in state.json, with name and version read live from each manifest.
-export async function discoverPlugins(): Promise<PluginInfo[]> {
+// Plugins listed in state.json, with name and version read from each manifest in the source.
+export async function discoverPlugins(source: TemplateSource): Promise<PluginInfo[]> {
   const plugins: PluginInfo[] = [];
   for (const { id } of STATE.plugins) {
     try {
-      const manifest = JSON.parse(await readFile(join(TEMPLATE_PLUGINS_DIR, id, 'manifest.json'), 'utf8'));
+      const manifest = JSON.parse((await source.read(`.obsidian/plugins/${id}`, 'manifest.json')).toString('utf8'));
       plugins.push({ id, name: manifest.name, version: manifest.version });
     } catch {
       // Listed in state.json but missing from the template; `mise run state` reports it
@@ -216,8 +227,17 @@ export async function getTemplateVersion(): Promise<string> {
   }
 }
 
+export const CONFLICT_POLICIES: ConflictPolicy[] = ['skip', 'take-template', 'keep-vault'];
+
+export function parseConflictPolicy(value: string | undefined): ConflictPolicy {
+  if (value === undefined) return 'skip';
+  if ((CONFLICT_POLICIES as string[]).includes(value)) return value as ConflictPolicy;
+  console.error(`Invalid --on-conflict "${value}". Use one of: ${CONFLICT_POLICIES.join(', ')}.`);
+  process.exit(1);
+}
+
 export function describeResult(r: ItemResult): string {
-  const { differs, missing, extra } = r.files;
+  const { differs, missing, extra, overridden, stale } = r.files;
   const parts = [];
   if (r.kind === 'plugin' && r.vaultVersion && r.templateVersion && r.vaultVersion !== r.templateVersion) {
     parts.push(`v${r.vaultVersion} -> v${r.templateVersion}`);
@@ -225,9 +245,19 @@ export function describeResult(r: ItemResult): string {
   if (r.status === 'outdated' || r.status === 'partial') {
     if (differs.length > 0) parts.push(`${differs.length} differ`);
     if (missing.length > 0) parts.push(`${missing.length} missing`);
+    if (stale.length > 0) parts.push(`${stale.length} stale`);
   }
+  if (overridden.length > 0) parts.push(`${overridden.length} local`);
   if (r.status === 'in sync' && extra.length > 0) parts.push(`+${extra.length} vault-only`);
   return parts.join(', ');
+}
+
+// "last synced: 0.3.0", "last synced: mixed (0.2.0, 0.3.0)" or "untracked" (no lock entries).
+export function describeSyncedVersions(results: ItemResult[]): string {
+  const versions = [...new Set(results.map((r) => r.syncedVersion).filter((v): v is string => Boolean(v)))].sort();
+  if (versions.length === 0) return 'untracked';
+  if (versions.length === 1) return `last synced: ${versions[0]}`;
+  return `last synced: mixed (${versions.join(', ')})`;
 }
 
 const KIND_LABELS: Record<ItemKind, string> = { plugin: 'plugins', dir: 'dirs', setting: 'settings' };
@@ -239,7 +269,7 @@ export function renderReport(
   results: ItemResult[],
   { verbose = false }: { verbose?: boolean } = {}
 ): string {
-  const lines = [`vault: ${vault.name}   (template ${templateVersion})`];
+  const lines = [`vault: ${vault.name}   (template ${templateVersion}, ${describeSyncedVersions(results)})`];
   const width = Math.max(...results.map((r) => r.label.length), 10);
   for (const kind of Object.keys(KIND_LABELS) as ItemKind[]) {
     const group = results.filter((r) => r.kind === kind);
@@ -248,7 +278,7 @@ export function renderReport(
       const detail = describeResult(r);
       lines.push(`  ${heading.padEnd(9)} ${r.label.padEnd(width)}  ${r.status}${detail ? `   (${detail})` : ''}`);
       if (verbose && r.status !== 'not synced') {
-        for (const status of ['differs', 'missing', 'extra'] as const) {
+        for (const status of ['differs', 'missing', 'stale', 'overridden', 'extra'] as const) {
           for (const file of r.files[status]) lines.push(`${' '.repeat(13)}${status}: ${file || r.id}`);
         }
       }

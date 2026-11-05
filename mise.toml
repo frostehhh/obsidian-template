@@ -21,6 +21,10 @@ run = "node scripts/state/state.ts"
 description = "Type-check the repo scripts with tsc"
 run = "npx tsc --noEmit -p ."
 
+[tasks.test]
+description = "Run the unit tests for the repo scripts"
+run = "node --test scripts/"
+
 [tasks."agent:sync"]
 description = "Non-interactive sync: node scripts/agent/sync.ts --vaults X,Y [--dry-run] [--json]"
 run = "node scripts/agent/sync.ts"

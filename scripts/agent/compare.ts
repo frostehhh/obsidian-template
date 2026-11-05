@@ -4,11 +4,11 @@ import {
   loadConfig,
   discoverVaults,
   makeVault,
-  getTemplateVersion,
   renderReport,
   pathExists,
 } from '../lib/cli.ts';
 import { compareVault } from '../lib/compare.ts';
+import { resolveSource } from '../lib/source.ts';
 import type { Vault } from '../lib/types.ts';
 
 function parseArgs() {
@@ -44,6 +44,7 @@ function parseArgs() {
     verbose: flags.has('--verbose'),
     json: flags.has('--json'),
     check: flags.has('--check'),
+    from: value('--from'),
   };
 }
 
@@ -51,7 +52,8 @@ async function main() {
   const args = parseArgs();
   const config = await loadConfig();
   const vaults = await discoverVaults();
-  const version = await getTemplateVersion();
+  const source = resolveSource(args.from);
+  const version = source.label;
 
   let selected: Vault[];
   if (args.target) {
@@ -87,7 +89,7 @@ async function main() {
   let allInSync = true;
   const output = [];
   for (const vault of selected) {
-    const results = await compareVault(vault);
+    const results = await compareVault(vault, source);
     if (results.some((r) => r.status !== 'in sync')) allInSync = false;
     output.push({ vault, results });
   }
@@ -103,7 +105,14 @@ async function main() {
         status,
         templateVersion,
         vaultVersion,
-        files: { match: files.match, differs: files.differs, missing: files.missing, extra: files.extra },
+        files: {
+          match: files.match,
+          differs: files.differs,
+          missing: files.missing,
+          extra: files.extra,
+          overridden: files.overridden,
+          stale: files.stale,
+        },
       })),
     }));
     console.log(JSON.stringify(payload, null, 2));

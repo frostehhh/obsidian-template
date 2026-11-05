@@ -80,6 +80,7 @@ Content directories and settings items are copied after plugins. Existing files 
 
 ```sh
 mise run sync [--non-interactive] [--vaults A,B] [--plugins x,y] [--dirs D,E] [--settings f,g] [--data-json] [--dry-run] [--json]
+              [--from <ref>] [--on-conflict skip|take-template|keep-vault] [--assume <version>]
 ```
 
 With `--non-interactive` the wizard is skipped and selections are read from CLI flags and `sync.config.json`. Use `--dry-run` to preview what would be copied without making changes. `--json` prints structured output instead of human-readable text.
@@ -105,6 +106,26 @@ Summary: 2 in sync, 1 outdated, 1 partial, 1 not synced
 `--verbose` lists the differing, missing and vault-only files, `--json` prints machine-readable output, and `--check` exits non-zero when anything is not in sync. Without an argument it shows the vault picker.
 
 The template version comes from the git tag (`git describe --tags`), falling back to `package.json`.
+
+## Versions, the lock file and conflicts
+
+The full design is in [docs/specs/sync-versioning.md](../../docs/specs/sync-versioning.md). In short:
+
+- **Source.** `sync` and `compare` read `template/` from a git tag, not from disk: `--from <ref>` (default: the latest `v*` tag). `--from working-tree` syncs uncommitted template changes, which is only meant for testing before a release.
+- **Lock.** Every sync writes `.obsidian/template.lock.json` in the vault: per item, the template version it was synced from and the hash of each file as synced. Do not edit it. `compare` shows it as `last synced: <version>`, or `untracked` when absent.
+- **Three-way reconcile.** Each file is compared in the template, in the lock (the base) and in the vault:
+
+  | Vault vs base | Template vs base | Result |
+  |---|---|---|
+  | unchanged | changed or added | updated or added |
+  | unchanged | removed | deleted (only files recorded in the lock) |
+  | changed | unchanged | kept, reported as a local override (`N local`) |
+  | changed | changed | conflict |
+
+  Files that exist only in the vault are never touched. Local overrides count as in sync.
+- **Conflicts.** `--on-conflict skip` (default) leaves the file and reports it again next run, and non-interactive runs exit 1. `take-template` applies the template version. `keep-vault` keeps the vault file and records it as a local override.
+- **Vaults without a lock.** Existing files that differ are conflicts. `--assume <version>` reads the base from that tag, so a vault known to be at 0.2.0 updates cleanly: `mise run sync -- --assume v0.2.0`.
+- **Data files** (`data.json`, `genericPreviewCache.json`) are copied only when missing, overwritten with `--data-json`, and never recorded in the lock.
 
 ## state.json
 

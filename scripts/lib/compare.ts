@@ -1,10 +1,6 @@
 import { readdir, readFile, stat } from 'fs/promises';
-import { createHash } from 'crypto';
 import { join, relative } from 'path';
 import {
-  TEMPLATE_DIR,
-  TEMPLATE_PLUGINS_DIR,
-  TEMPLATE_OBSIDIAN_DIR,
   DATA_FILES,
   PLUGIN_DIR_CONDITIONS,
   DIR_OPTIONS,
@@ -12,7 +8,9 @@ import {
   pathExists,
   discoverPlugins,
 } from './cli.ts';
-import type { Item, ItemResult, Status, TreeComparison, Vault } from './types.ts';
+import { hashContent } from './source.ts';
+import { loadLock, itemKey } from './lock.ts';
+import type { Item, ItemResult, LockItem, SourceFile, Status, TemplateSource, TreeComparison, Vault } from './types.ts';
 
 // Statuses, ordered from best to worst for display.
 export const STATUSES: Status[] = ['in sync', 'outdated', 'partial', 'not synced'];
@@ -33,56 +31,88 @@ async function listFiles(root: string): Promise<string[]> {
   return files;
 }
 
-async function hashFile(file: string): Promise<string> {
-  return createHash('sha1').update(await readFile(file)).digest('hex');
+export async function hashFile(file: string): Promise<string> {
+  return hashContent(await readFile(file));
 }
 
-// Compares a template path (file or directory) with its counterpart in a vault.
+// Where an item lives in the template (relative to template/) and in a vault.
+export function itemPaths(item: Item, vault: Vault): { srcRel: string; destRoot: string } {
+  if (item.kind === 'plugin') return { srcRel: `.obsidian/plugins/${item.id}`, destRoot: join(vault.pluginsDir, item.id) };
+  if (item.kind === 'dir') return { srcRel: item.id, destRoot: join(vault.root, item.id) };
+  return { srcRel: `.obsidian/${item.id}`, destRoot: join(vault.root, '.obsidian', item.id) };
+}
+
+// Plugin data files hold per-vault state and stay outside the lock (top level of the plugin directory only).
+export function isDataFile(item: Item, rel: string): boolean {
+  return item.kind === 'plugin' && DATA_FILES.has(rel);
+}
+
+// Compares template files with their counterpart in a vault.
 // skip(relPath) excludes files from the comparison, like sync does for plugin data.json.
+// base: the vault's lock entry, used to tell local overrides and stale files from real differences.
 async function compareTrees(
-  srcRoot: string,
+  srcFiles: SourceFile[],
   destRoot: string,
-  skip: (rel: string) => boolean = () => false
+  skip: (rel: string) => boolean = () => false,
+  base?: Record<string, string>
 ): Promise<TreeComparison> {
-  const result = { match: [] as string[], differs: [] as string[], missing: [] as string[], extra: [] as string[] };
-  const srcFiles = (await listFiles(srcRoot)).filter((f) => !skip(f));
+  const result = {
+    match: [] as string[],
+    differs: [] as string[],
+    missing: [] as string[],
+    extra: [] as string[],
+    overridden: [] as string[],
+    stale: [] as string[],
+  };
+  const src = srcFiles.filter((f) => !skip(f.file));
   const destExists = await pathExists(destRoot);
   const destFiles = destExists ? (await listFiles(destRoot)).filter((f) => !skip(f)) : [];
   const destSet = new Set(destFiles);
 
-  for (const rel of srcFiles) {
-    if (!destSet.has(rel)) {
-      result.missing.push(rel);
+  for (const { file, hash } of src) {
+    const baseHash = base?.[file];
+    const unchangedInTemplate = baseHash !== undefined && baseHash === hash;
+    if (!destSet.has(file)) {
+      (unchangedInTemplate ? result.overridden : result.missing).push(file);
       continue;
     }
-    const [a, b] = await Promise.all([hashFile(join(srcRoot, rel)), hashFile(join(destRoot, rel))]);
-    (a === b ? result.match : result.differs).push(rel);
+    const vaultHash = await hashFile(join(destRoot, file));
+    if (vaultHash === hash) result.match.push(file);
+    else (unchangedInTemplate ? result.overridden : result.differs).push(file);
   }
-  const srcSet = new Set(srcFiles);
-  result.extra = destFiles.filter((f) => !srcSet.has(f));
+
+  const srcSet = new Set(src.map((f) => f.file));
+  const stale = new Set<string>();
+  for (const [file, baseHash] of Object.entries(base ?? {})) {
+    if (srcSet.has(file) || skip(file) || !destSet.has(file)) continue;
+    if ((await hashFile(join(destRoot, file))) === baseHash) stale.add(file);
+  }
+  result.stale = [...stale].sort();
+  result.extra = destFiles.filter((f) => !srcSet.has(f) && !stale.has(f));
   return { ...result, destExists };
 }
 
 function statusOf(files: TreeComparison): Status {
-  const { match, differs, missing, destExists } = files;
+  const { match, differs, missing, stale, destExists } = files;
   if (!destExists || (match.length === 0 && differs.length === 0 && missing.length > 0)) return 'not synced';
-  if (differs.length > 0) return 'outdated';
+  if (differs.length > 0 || stale.length > 0) return 'outdated';
   if (missing.length > 0) return 'partial';
   return 'in sync';
 }
 
-async function readVersion(manifestPath: string): Promise<string | null> {
+async function readVersion(source: TemplateSource | null, rel: string, vaultPath?: string): Promise<string | null> {
   try {
-    return JSON.parse(await readFile(manifestPath, 'utf8')).version ?? null;
+    const raw = source ? await source.read(rel, 'manifest.json') : await readFile(vaultPath ?? '', 'utf8');
+    return JSON.parse(raw.toString()).version ?? null;
   } catch {
     return null;
   }
 }
 
 // Every item sync can copy: { kind: 'plugin' | 'dir' | 'setting', id, label }.
-export async function listItems(): Promise<Item[]> {
+export async function listItems(source: TemplateSource): Promise<Item[]> {
   const items: Item[] = [];
-  for (const plugin of await discoverPlugins()) {
+  for (const plugin of await discoverPlugins(source)) {
     items.push({ kind: 'plugin', id: plugin.id, label: plugin.name });
   }
 
@@ -91,40 +121,41 @@ export async function listItems(): Promise<Item[]> {
   for (const dir of dirs) {
     if (seen.has(dir.toLowerCase())) continue;
     seen.add(dir.toLowerCase());
-    if (await pathExists(join(TEMPLATE_DIR, dir))) items.push({ kind: 'dir', id: dir, label: dir });
+    if ((await source.list(dir)).length > 0) items.push({ kind: 'dir', id: dir, label: dir });
   }
 
   for (const setting of SETTINGS_ITEMS) {
-    if (await pathExists(join(TEMPLATE_OBSIDIAN_DIR, setting))) {
+    if ((await source.list(`.obsidian/${setting}`)).length > 0) {
       items.push({ kind: 'setting', id: setting, label: setting });
     }
   }
   return items;
 }
 
-export async function compareItem(vault: Vault, item: Item): Promise<ItemResult> {
-  let files: TreeComparison;
+export async function compareItem(
+  vault: Vault,
+  item: Item,
+  source: TemplateSource,
+  lockItem?: LockItem
+): Promise<ItemResult> {
+  const { srcRel, destRoot } = itemPaths(item, vault);
+  const srcFiles = await source.list(srcRel);
+  const files = await compareTrees(srcFiles, destRoot, (rel) => isDataFile(item, rel), lockItem?.files);
   let extra: { templateVersion?: string | null; vaultVersion?: string | null } = {};
   if (item.kind === 'plugin') {
-    const src = join(TEMPLATE_PLUGINS_DIR, item.id);
-    const dest = join(vault.pluginsDir, item.id);
-    files = await compareTrees(src, dest, (rel) => DATA_FILES.has(rel));
     extra = {
-      templateVersion: await readVersion(join(src, 'manifest.json')),
-      vaultVersion: await readVersion(join(dest, 'manifest.json')),
+      templateVersion: await readVersion(source, srcRel),
+      vaultVersion: await readVersion(null, srcRel, join(destRoot, 'manifest.json')),
     };
-  } else if (item.kind === 'dir') {
-    files = await compareTrees(join(TEMPLATE_DIR, item.id), join(vault.root, item.id));
-  } else {
-    files = await compareTrees(join(TEMPLATE_OBSIDIAN_DIR, item.id), join(vault.root, '.obsidian', item.id));
   }
-  return { ...item, ...extra, status: statusOf(files), files };
+  return { ...item, ...extra, syncedVersion: lockItem?.templateVersion ?? null, status: statusOf(files), files };
 }
 
-export async function compareVault(vault: Vault, items?: Item[]): Promise<ItemResult[]> {
-  const list = items ?? (await listItems());
+export async function compareVault(vault: Vault, source: TemplateSource, items?: Item[]): Promise<ItemResult[]> {
+  const list = items ?? (await listItems(source));
+  const lock = await loadLock(vault);
   const results: ItemResult[] = [];
-  for (const item of list) results.push(await compareItem(vault, item));
+  for (const item of list) results.push(await compareItem(vault, item, source, lock?.items[itemKey(item)]));
   return results;
 }
 

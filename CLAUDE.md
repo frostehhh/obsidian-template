@@ -12,7 +12,9 @@ Obsidian template vault (`template/`) plus the tooling around it (`scripts/`). O
 
 ## Tasks
 
-Run through mise: `mise tasks` lists them. `sync`, `compare`, `state`, `release`, `typecheck`.
+Run through mise: `mise tasks` lists them. `sync`, `compare`, `state`, `release`, `typecheck`, `test`.
+
+Sync reads the template from a git tag and tracks versions in each vault's `.obsidian/template.lock.json`; the design is in `docs/specs/sync-versioning.md`. Update the spec when sync behavior changes.
 
 ## Git, changelog and releases
 

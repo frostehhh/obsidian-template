@@ -48,6 +48,10 @@ export interface TreeComparison {
   differs: string[];
   missing: string[];
   extra: string[];
+  // Vault differs from the template, but the template did not change since the last sync: a local override.
+  overridden: string[];
+  // Removed from the template since the last sync, still present and unchanged in the vault.
+  stale: string[];
   destExists: boolean;
 }
 
@@ -56,6 +60,37 @@ export interface ItemResult extends Item {
   files: TreeComparison;
   templateVersion?: string | null;
   vaultVersion?: string | null;
+  // Template version this item was last synced from, per the vault's lock file (null: untracked).
+  syncedVersion?: string | null;
+}
+
+export type ConflictPolicy = 'skip' | 'take-template' | 'keep-vault';
+
+export interface SourceFile {
+  file: string;
+  hash: string;
+}
+
+// Where template content comes from: a git tag (deterministic) or the working tree.
+export interface TemplateSource {
+  ref: string;
+  // Version recorded in lock files, e.g. "0.3.1" or "working-tree".
+  version: string;
+  // Human readable, e.g. "v0.3.1".
+  label: string;
+  // Files under template/<rel>, relative to it, sorted. [''] when rel is a file, [] when it does not exist.
+  list(rel: string): Promise<SourceFile[]>;
+  read(rel: string, file: string): Promise<Buffer>;
+}
+
+export interface LockItem {
+  templateVersion: string;
+  files: Record<string, string>;
+}
+
+export interface Lock {
+  lockVersion: 1;
+  items: Record<string, LockItem>;
 }
 
 export interface VaultReport {
