@@ -78,7 +78,7 @@ See [CALLOUTS.md](references/CALLOUTS.md) for the full list with aliases, nestin
 ```yaml
 ---
 title: My Note
-date: 2024-01-15
+dateCreated: 2024-01-15
 tags:
   - project
   - active
@@ -157,7 +157,7 @@ Inline footnote.^[This is inline.]
 ````markdown
 ---
 title: Project Alpha
-date: 2024-01-15
+dateCreated: 2024-01-15
 tags:
   - project
   - active
