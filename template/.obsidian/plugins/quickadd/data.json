@@ -101,6 +101,26 @@
       }
     },
     {
+      "id": "5c1d8a52-3f0e-4b7a-9d64-2e8b7a1c0f31",
+      "name": "TaskNotes - Create note for project",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "TaskNotes - Create note for project",
+        "id": "a3e94b17-6c28-4d05-b1f9-87d2c4e5a610",
+        "commands": [
+          {
+            "name": "qa-taskNotes-createNoteForProject",
+            "type": "UserScript",
+            "id": "e7f20c93-1b4a-4a68-8c35-0d9f6b2a7e44",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-taskNotes-createNoteForProject.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
       "id": "d136e547-a540-4227-9099-b2912131d5fc",
       "name": "Folder - Create or Open folder base",
       "type": "Macro",

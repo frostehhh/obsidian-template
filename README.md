@@ -77,6 +77,7 @@ See https://quickadd.obsidian.guide/docs/ for information on the relevant plugin
 | `qa-taskNotes-setCurrentNoteAsProject.js` | Add `task` and `project` tags to the current note's frontmatter, marking it as a project |
 | `qa-taskNotes-createOrOpenTasksDefaultViewForFolder.js` | Scaffold a default task view Base for the current folder, or open it if it already exists |
 | `qa-taskNotes-createOrOpenProjectBase.js` | Find the project note in the current or parent directories (offering to convert a folder note if none is found) and create a `Notes - <project>.base` listing notes whose `Parent` is the project, or open it if it already exists |
+| `qa-taskNotes-createNoteForProject.js` | Create a note under the `Notes/` subfolder of a project note in the current or parent directories, with its `Parent` set to the project so it appears in the project base |
 | `qa-createOrOpenBaseForFolder.js` | Create a generic Base view for the current folder, or open it if it already exists |
 | `qa-wrapFileInFolder.js` | Wrap the active file into a new folder of the same name |
 
