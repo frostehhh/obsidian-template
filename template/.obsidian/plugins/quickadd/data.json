@@ -121,6 +121,26 @@
       }
     },
     {
+      "id": "8b2f6c14-9d3e-4a71-b5c0-3e7a1d94f268",
+      "name": "TaskNotes - Create or Open Tasks Default View for Project",
+      "type": "Macro",
+      "command": false,
+      "runOnStartup": false,
+      "macro": {
+        "name": "TaskNotes - Create or Open Tasks Default View for Project",
+        "id": "f4c07a9e-2b15-4d83-a6e1-90c8d5b3721a",
+        "commands": [
+          {
+            "name": "qa-taskNotes-createOrOpenTasksDefaultViewForProject",
+            "type": "UserScript",
+            "id": "1d9e5b73-c8a4-4f26-9b07-6a3e2f8c4d15",
+            "path": "--Configurations--/Scripts/QuickAdd/qa-taskNotes-createOrOpenTasksDefaultViewForProject.js",
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
       "id": "d136e547-a540-4227-9099-b2912131d5fc",
       "name": "Folder - Create or Open folder base",
       "type": "Macro",
