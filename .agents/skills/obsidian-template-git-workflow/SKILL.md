@@ -23,7 +23,7 @@ Any commit that changes `template/`, `scripts/`, or the skills adds a line to `c
 - Group under `## Added`, `## Changed`, `## Deprecated`, `## Removed`, `## Fixed`, `## Security` (create the heading when first needed).
 - Phrase by impact on someone using or syncing the template: "Folder base no longer errors on notes without a Parent", not "Guard filter".
 - Breaking changes (vault structure, property schema, folder names, QuickAdd script names or contracts) get a **Migration** sub-bullet with the steps to take in an existing vault. Deprecations name the removal version.
-- Mention when users must re-sync a specific plugin or directory (`mise run sync`).
+- Mention when users must update a specific plugin or directory in their vaults (the `obsidian-template-vault-update` skill). A change that spans files, such as a QuickAdd script and its choice in `data.json`, belongs in one commit, because vault-update groups changes by commit.
 - No entry is needed for changes that do not affect the template's users: README typos, formatting, commit-only housekeeping.
 
 ## Choosing the version bump
@@ -49,7 +49,7 @@ Never hand-edit the `package.json` version or create release tags manually, so t
 
 ## Checking what a change reaches
 
-After changing synced content (plugins, directories, settings), `mise run compare <vault>` shows what an existing vault is missing or has out of date. `mise run sync` copies it.
+After changing synced content (plugins, directories, settings), `mise run vault-update:report <vault> --to HEAD` shows how the change reaches an existing vault. Updating a vault follows the `obsidian-template-vault-update` skill. `mise run sync` is DRAFT; do not use it.
 
 ## Safety
 

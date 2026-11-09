@@ -1,5 +1,8 @@
 # sync and compare
 
+> **DRAFT: `sync` is known to leave vaults half updated.** For example, a new QuickAdd script arrives without the `data.json` choice that runs it. The causes are listed in [docs/specs/sync-versioning.md](../../docs/specs/sync-versioning.md#known-failures).
+> To update a vault, use the `obsidian-template-vault-update` skill with `mise run vault-update:report|apply|record`; the design is in [docs/specs/vault-update.md](../../docs/specs/vault-update.md). `sync` refuses vaults that have a v2 lock. `compare` is read-only and stays usable.
+
 CLI tools for syncing plugins, content directories, and Obsidian settings from this template vault to other vaults.
 
 ## Usage

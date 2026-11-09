@@ -70,6 +70,7 @@ function parseArgs() {
 }
 
 async function main() {
+  console.error('DRAFT: sync is known to drop changes (data.json among them). Update vaults with the obsidian-template-vault-update skill: mise run vault-update:report <vault>.');
   const args = parseArgs();
 
   // --apply <file>: run a saved plan exactly as written; refuses if anything changed since it was made.

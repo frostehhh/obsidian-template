@@ -1,6 +1,16 @@
 # Sync versioning
 
-Status: all three phases implemented (tag source, lock file, three-way reconcile, vault policy, saved plans, migrations, `data.json` merge, patches).
+Status: **DRAFT**. All three phases are implemented, but the deterministic sync leaves vaults half updated (see "Known failures"). Update vaults with the `obsidian-template-vault-update` skill and `mise run vault-update:*` instead (`docs/specs/vault-update.md`). `sync` refuses vaults that have a v2 lock.
+
+## Known failures
+
+A new QuickAdd script arrives without the choice in `data.json` that runs it. There are four causes:
+
+- **`data.json` is skipped by default.** `syncDataJson` is `false` in the repo config, and a vault's `data.json` is copied only when it is missing.
+- **The CLI flag overrode the vault config.** Non-interactive `sync` and `agent:sync` passed `--data-json` as `false` when the flag was absent, and that `false` overrode a vault's `syncDataJson: true`. Fixed: the flag now overrides only when it is given.
+- **A merge with no base drops every change.** If the merge has no recorded base (no `dataVersion`), every differing key is a conflict, and the default `--on-conflict skip` drops all of them. Journal's lock is at 0.4.0 without a QuickAdd `dataVersion` and is missing the `qa-taskNotes-*` choices.
+- **`--from working-tree` records `working-tree` as the version.** That makes the lock useless as a base for later merges (Odyssey).
+
 
 ## Goals
 

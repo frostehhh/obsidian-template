@@ -14,6 +14,8 @@ Breaking changes need a **Migration** note. -->
 
 ## Changed
 
+- `mise run sync` and `agent:sync` are DRAFT. They are known to leave vaults half updated: a new QuickAdd script arrives without its `data.json` choice. They now print a warning; use the vault-update skill instead
+
 - The `obsidian-markdown` skill now uses `dateCreated` instead of `date` in its property examples and reference, so agents write the same date property the template vaults use. Re-sync the skills (`mise run sync`) to pick it up
 
 ## Fixed
