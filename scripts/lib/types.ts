@@ -37,6 +37,8 @@ export interface SyncConfig {
   // JSON merge patches (RFC 7386) keyed by vault-relative path, reapplied after every sync:
   // { ".obsidian/plugins/quickadd/data.json": { "someSetting": false } }. null deletes a key.
   patches?: Record<string, unknown>;
+  // vault-update: template changes the vault owner does not want, keyed by entry ("path", "glob" or "path#key"), value is a label.
+  decline?: Record<string, string>;
 }
 
 export interface Vault {
@@ -107,6 +109,17 @@ export interface Lock {
   items: Record<string, LockItem>;
   // Versions of the migrations already run on this vault (absent in locks written before migrations existed).
   migrations?: string[];
+}
+
+// Written by vault-update record. commit: the template commit the vault matches (except pending entries).
+export interface LockV2 {
+  lockVersion: 2;
+  commit: string;
+  version: string;
+  // Scope at the last record: "plugin:<id>", "dir:<name>", "setting:<name>"
+  items: string[];
+  // Deferred entries: old is the state the vault still matches (hash, "-" absent, "?" unknown)
+  pending?: Record<string, { old: string; since: string }>;
 }
 
 export interface VaultReport {

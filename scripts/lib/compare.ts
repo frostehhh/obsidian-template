@@ -9,7 +9,7 @@ import {
   discoverPlugins,
 } from './cli.ts';
 import { hashContent } from './source.ts';
-import { loadLock, itemKey } from './lock.ts';
+import { readLockFile, itemKey } from './lock.ts';
 import { loadPolicy, vaultRelPath, NO_POLICY } from './policy.ts';
 import type { Policy } from './policy.ts';
 import type { Item, ItemResult, LockItem, SourceFile, Status, TemplateSource, TreeComparison, Vault } from './types.ts';
@@ -165,8 +165,14 @@ export async function compareItem(
 export async function compareVault(vault: Vault, source: TemplateSource, items?: Item[]): Promise<ItemResult[]> {
   const policy = await loadPolicy(vault);
   const list = (items ?? (await listItems(source))).filter((item) => !policy.isExcluded(item));
-  const lock = await loadLock(vault);
+  const lock = await readLockFile(vault);
   const results: ItemResult[] = [];
+  if (lock?.lockVersion === 2) {
+    // vault-update lock: no per-file base, so differences are reported as plain differences
+    const managed = `${lock.version} (${lock.commit.slice(0, 7)}, vault-update)`;
+    for (const item of list) results.push({ ...(await compareItem(vault, item, source, undefined, policy)), syncedVersion: managed });
+    return results;
+  }
   for (const item of list) results.push(await compareItem(vault, item, source, lock?.items[itemKey(item)], policy));
   return results;
 }

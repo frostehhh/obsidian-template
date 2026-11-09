@@ -17,6 +17,18 @@ run = "node scripts/compare/compare.ts"
 description = "Refresh state.json from template/ (add --check to only verify)"
 run = "node scripts/state/state.ts"
 
+[tasks."vault-update:report"]
+description = "Read-only: what changed in the template since a vault's last update: <vault> [--to ref] [--scope] [--json]"
+run = "node scripts/vault-update/report.ts"
+
+[tasks."vault-update:apply"]
+description = "Write chosen template changes into a vault: <vault> (--entry id... | --all) [--take-template id] [--to ref] [--dry-run]"
+run = "node scripts/vault-update/apply.ts"
+
+[tasks."vault-update:record"]
+description = "Write the vault's v2 lock after an update: <vault> --commit ref [--keep|--defer|--decline id] [--save-scope]"
+run = "node scripts/vault-update/record.ts"
+
 [tasks.typecheck]
 description = "Type-check the repo scripts with tsc"
 run = "npx tsc --noEmit -p ."
