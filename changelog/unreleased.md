@@ -15,3 +15,8 @@ Breaking changes need a **Migration** note. -->
 ## Changed
 
 - The `obsidian-markdown` skill now uses `dateCreated` instead of `date` in its property examples and reference, so agents write the same date property the template vaults use. Re-sync the skills (`mise run sync`) to pick it up
+
+## Fixed
+
+- Non-interactive `sync` no longer overrides a vault's `syncDataJson: true` when `--data-json` is not given
+- Saving the wizard's selections to a vault's `sync.config.json` keeps its other keys (`protect`, `exclude`, `pin`, `patches`, `decline`) instead of overwriting the file

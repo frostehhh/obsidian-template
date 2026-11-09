@@ -46,7 +46,7 @@ function parseArgs() {
     plugins: list('--plugins'),
     dirs: list('--dirs'),
     settings: list('--settings'),
-    dataJson: flags.has('--data-json'),
+    dataJson: flags.has('--data-json') || undefined,
     json: flags.has('--json'),
     dryRun: flags.has('--dry-run'),
     from: value('--from'),

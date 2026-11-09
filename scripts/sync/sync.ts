@@ -57,7 +57,7 @@ function parseArgs() {
     plugins: list('--plugins'),
     dirs: list('--dirs'),
     settings: list('--settings'),
-    dataJson: flags.has('--data-json'),
+    dataJson: flags.has('--data-json') || undefined,
     json: flags.has('--json'),
     dryRun: flags.has('--dry-run'),
     from: value('--from'),
@@ -432,7 +432,9 @@ async function main() {
     if (saveConfig) {
       for (const { vault, pluginIds, dirs, settings, syncDataJson: vaultSyncDataJson } of vaultPlans) {
         const vaultConfigPath = join(vault.root, '.obsidian', 'sync.config.json');
+        // Merge, so protect, exclude, pin, patches and decline survive
         const vaultConfig = {
+          ...(await loadVaultConfig(vault.root)),
           defaultPlugins: pluginIds,
           defaultDirs: dirs,
           defaultSettings: settings,
