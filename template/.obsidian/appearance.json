@@ -1,11 +1,12 @@
 {
   "accentColor": "",
   "theme": "obsidian",
-  "cssTheme": "Primary",
+  "cssTheme": "Ardoise",
   "enabledCssSnippets": [
     "custom-styles"
   ],
   "nativeMenus": false,
   "translucency": false,
-  "baseFontSize": 16
+  "baseFontSize": 16,
+  "showRibbon": true
 }
