@@ -18,6 +18,9 @@ Breaking changes need a **Migration** note. -->
 
 - The `obsidian-markdown` skill now uses `dateCreated` instead of `date` in its property examples and reference, so agents write the same date property the template vaults use. Re-sync the skills (`mise run sync`) to pick it up
 
+- Plugin updates: Excalidraw 2.29.2, Obsidian Git 2.43.0, Markdown Formatting Assistant 0.10.1, Open VSCode 1.6.0, QuickAdd 2.33.1, Supercharged Links 0.14.0, Tag Wrangler 0.6.5, Templater 2.27.0. QuickAdd, Templater and Excalidraw settings (`data.json`) migrate to the new versions
+- Default theme is now Ardoise (was Primary) and the ribbon is shown
+
 ## Fixed
 
 - `createNote` applies each template through QuickAdd's `applyTemplateToActiveFile`, so frontmatter merges like Obsidian's Templates plugin: list properties such as `tags` are combined instead of duplicated, and the later template wins for other repeated keys. Run the vault update for `lib/createNote.js`
