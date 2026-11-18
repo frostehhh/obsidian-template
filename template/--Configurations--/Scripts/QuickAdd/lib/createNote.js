@@ -8,32 +8,28 @@ async function vaultRequire(app, name) {
   return mod.exports;
 }
 
-function splitTemplate(raw) {
-  const match = raw.match(/^---\n([\s\S]*?)\n---[ \t]*\r?\n?([\s\S]*)$/);
-  if (!match) {
-    return { frontmatter: "", body: raw.trim() };
-  }
-  return { frontmatter: match[1], body: match[2] };
-}
-
-async function readTemplateContent(app, templates) {
+function resolveTemplates(app, templates) {
   const paths = Array.isArray(templates) ? templates : [templates];
-  const frontmatters = [];
-  const bodies = [];
   for (const path of paths) {
     if (!app.vault.getAbstractFileByPath(path)) {
       throw new Error(`Template not found: "${path}".`);
     }
-    const raw = await app.vault.adapter.read(path);
-    const { frontmatter, body } = splitTemplate(raw);
-    if (frontmatter) frontmatters.push(frontmatter);
-    if (body.trim()) bodies.push(body.trim());
   }
+  return paths;
+}
 
-  const parts = [];
-  if (frontmatters.length) parts.push(`---\n${frontmatters.join("\n")}\n---\n`);
-  if (bodies.length) parts.push(bodies.join("\n\n"));
-  return parts.join("\n");
+async function applyTemplates(app, quickAddApi, file, templatePaths) {
+  const reversed = [...templatePaths].reverse();
+  for (let i = 0; i < reversed.length; i++) {
+    if (app.workspace.getActiveFile()?.path !== file.path) {
+      new Notice(`"${file.basename}" is no longer active. Stopped applying templates.`);
+      return false;
+    }
+    await quickAddApi.applyTemplateToActiveFile(reversed[i], {
+      mode: i === 0 ? "replace" : "top",
+    });
+  }
+  return true;
 }
 
 async function createNoteFromPresets(app, quickAddApi, presets, options = {}) {
@@ -48,9 +44,9 @@ async function createNoteFromPresets(app, quickAddApi, presets, options = {}) {
     if (!chosen) return;
   }
 
-  let content;
+  let templatePaths;
   try {
-    content = await readTemplateContent(app, chosen.templates);
+    templatePaths = resolveTemplates(app, chosen.templates);
   } catch (e) {
     new Notice(e.message);
     return;
@@ -65,15 +61,13 @@ async function createNoteFromPresets(app, quickAddApi, presets, options = {}) {
       : title.trim()
     : datePrefix;
 
-  content = content.replace(
-    /<%\s*tp\.date\.now\(\s*(?:format\s*=\s*)?["']([^"']*)["']\s*\)\s*%>/g,
-    (_, fmt) => window.moment().format(fmt)
-  );
-
   await ensureFolder(app, chosen.path);
 
   const notePath = `${chosen.path}/${fileName}.md`;
-  await createAndOpenFile(app, notePath, content, { label: fileName, folder: chosen.path });
+  const file = await createAndOpenFile(app, notePath, "", { label: fileName, folder: chosen.path });
+  if (!file) return;
+
+  await applyTemplates(app, quickAddApi, file, templatePaths);
 }
 
 module.exports = { createNoteFromPresets };

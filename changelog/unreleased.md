@@ -20,5 +20,7 @@ Breaking changes need a **Migration** note. -->
 
 ## Fixed
 
+- `createNote` applies each template through QuickAdd's `applyTemplateToActiveFile`, so frontmatter merges like Obsidian's Templates plugin: list properties such as `tags` are combined instead of duplicated, and the later template wins for other repeated keys. Run the vault update for `lib/createNote.js`
+
 - Non-interactive `sync` no longer overrides a vault's `syncDataJson: true` when `--data-json` is not given
 - Saving the wizard's selections to a vault's `sync.config.json` keeps its other keys (`protect`, `exclude`, `pin`, `patches`, `decline`) instead of overwriting the file
